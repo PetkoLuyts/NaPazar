@@ -1,6 +1,11 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.model.Promotions;
+import com.example.scrapeservice.model.Stores;
+import com.example.scrapeservice.repository.PromotionsRepository;
+import com.example.scrapeservice.repository.StoresRepository;
 import com.example.scrapeservice.service.ScrapeService;
+import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -9,13 +14,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+@RequiredArgsConstructor
 @Service
 public class ScrapeServiceImpl implements ScrapeService {
     @Value("${billa.categories}")
     private String billaCategoryUrl;
+
+    private static final int BILLA_ID = 1;
+
+    private final PromotionsRepository promotionsRepository;
+
+    private final StoresRepository storesRepository;
 
     @Override
     public void scrapeData() {
@@ -85,13 +98,14 @@ public class ScrapeServiceImpl implements ScrapeService {
         }
     }
 
-    private LocalDate getBillaPromotionStart(Document document) {
+    private Date getBillaPromotionStart(Document document) {
         Element dateDiv = document.selectFirst("div.date");
 
         if (dateDiv != null) {
             String[] promotionText = dateDiv.text().split(" ");
             try {
-                return LocalDate.parse(promotionText[promotionText.length - 5], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 5], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                return Date.valueOf(localDate);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -100,13 +114,14 @@ public class ScrapeServiceImpl implements ScrapeService {
         return null;
     }
 
-    private LocalDate getBillaPromotionEnd(Document document) {
+    private Date getBillaPromotionEnd(Document document) {
         Element dateDiv = document.selectFirst("div.date");
 
         if (dateDiv != null) {
             String[] promotionText = dateDiv.text().split(" ");
             try {
-                return LocalDate.parse(promotionText[promotionText.length - 2], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 2], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                return Date.valueOf(localDate);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -120,12 +135,23 @@ public class ScrapeServiceImpl implements ScrapeService {
 
         try {
             document = Jsoup.connect(billaCategoryUrl).get();
-            LocalDate billaPromotionStart = getBillaPromotionStart(document);
-            LocalDate billaPromotionEnd = getBillaPromotionEnd(document);
+            Date billaPromotionStart = getBillaPromotionStart(document);
+            Date billaPromotionEnd = getBillaPromotionEnd(document);
+
+            Stores billaStore = storesRepository.findById(BILLA_ID)
+                    .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + BILLA_ID));
+
+            Promotions billaPromotion = Promotions.builder()
+                    .startDate(billaPromotionStart)
+                    .endDate(billaPromotionEnd)
+                    .storesByStoreId(billaStore)
+                    .build();
+
+            promotionsRepository.save(billaPromotion);
 
             Elements products = document.select("div.product");
 
-            for (int i = 5; i < products.size(); i++) {
+            for (int i = 5; i < products.size() - 10; i++) {
                 String productTitle = getProductTitle(products.get(i), ".actualProduct");
                 Double productOldPrice = getBillaProductOldPrice(products.get(i), ".price");
                 Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");

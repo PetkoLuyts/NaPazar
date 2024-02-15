@@ -1,19 +1,23 @@
 package com.example.scrapeservice.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Objects;
 
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class Stores {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     @Column(name = "id")
-    private int id;
+    private Integer id;
 
     @Column(name = "name")
     private String name;
