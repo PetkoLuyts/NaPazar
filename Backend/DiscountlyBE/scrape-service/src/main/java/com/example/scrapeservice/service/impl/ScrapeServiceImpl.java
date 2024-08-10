@@ -35,6 +35,40 @@ public class ScrapeServiceImpl implements ScrapeService {
         scrapeBillaPromotions();
     }
 
+    private void scrapeBillaPromotions() {
+        final Document document;
+
+        try {
+            document = Jsoup.connect(billaCategoryUrl).get();
+            Date billaPromotionStart = getBillaPromotionStart(document);
+            Date billaPromotionEnd = getBillaPromotionEnd(document);
+
+            Stores billaStore = storesRepository.findById(BILLA_ID)
+                    .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + BILLA_ID));
+
+            Promotions billaPromotion = Promotions.builder()
+                    .startDate(billaPromotionStart)
+                    .endDate(billaPromotionEnd)
+                    .storesByStoreId(billaStore)
+                    .build();
+
+            promotionsRepository.save(billaPromotion);
+
+            Elements products = document.select("div.product");
+
+            for (int i = 5; i < products.size() - 10; i++) {
+                String productTitle = getProductTitle(products.get(i), ".actualProduct");
+                Double productOldPrice = getBillaProductOldPrice(products.get(i), ".price");
+                Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");
+                String productDiscountPhrase = getProductDiscountPhrase(products.get(i), ".discount");
+
+                System.out.printf("%s %f %f %s", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private String getProductTitle(Element product, String className) {
         try {
             Element productTitleElement = product.selectFirst(className);
@@ -128,39 +162,5 @@ public class ScrapeServiceImpl implements ScrapeService {
         }
 
         return null;
-    }
-
-    private void scrapeBillaPromotions() {
-        final Document document;
-
-        try {
-            document = Jsoup.connect(billaCategoryUrl).get();
-            Date billaPromotionStart = getBillaPromotionStart(document);
-            Date billaPromotionEnd = getBillaPromotionEnd(document);
-
-            Stores billaStore = storesRepository.findById(BILLA_ID)
-                    .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + BILLA_ID));
-
-            Promotions billaPromotion = Promotions.builder()
-                    .startDate(billaPromotionStart)
-                    .endDate(billaPromotionEnd)
-                    .storesByStoreId(billaStore)
-                    .build();
-
-            promotionsRepository.save(billaPromotion);
-
-            Elements products = document.select("div.product");
-
-            for (int i = 5; i < products.size() - 10; i++) {
-                String productTitle = getProductTitle(products.get(i), ".actualProduct");
-                Double productOldPrice = getBillaProductOldPrice(products.get(i), ".price");
-                Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");
-                String productDiscountPhrase = getProductDiscountPhrase(products.get(i), ".discount");
-
-                System.out.printf("%s %f %f %s", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

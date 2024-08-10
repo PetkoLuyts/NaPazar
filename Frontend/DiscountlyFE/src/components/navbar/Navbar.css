@@ -1,0 +1,37 @@
+/* src/Navbar.css */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333;
+  padding: 10px; /* Adjust padding to ensure enough space */
+  color: white;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.navbar-logo a,
+.navbar-cart a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+
+.navbar-logo {
+  flex-grow: 1;
+}
+
+.navbar-cart {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.navbar-logo a:hover,
+.navbar-cart a:hover {
+  text-decoration: underline;
+}
