@@ -1,5 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.model.Product;
 import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
 import com.example.scrapeservice.repository.PromotionRepository;
@@ -52,7 +53,7 @@ public class ScrapeServiceImpl implements ScrapeService {
                     .storeByStoreId(billaStore)
                     .build();
 
-            promotionRepository.save(billaPromotion);
+            Promotion savedPromotion = promotionRepository.save(billaPromotion);
 
             Elements products = document.select("div.product");
 
@@ -61,6 +62,13 @@ public class ScrapeServiceImpl implements ScrapeService {
                 Double productOldPrice = getBillaProductOldPrice(products.get(i), ".price");
                 Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");
                 String productDiscountPhrase = getProductDiscountPhrase(products.get(i), ".discount");
+
+                Product product = Product.builder()
+                        .title(productTitle)
+                        .oldPrice(productOldPrice)
+                        .newPrice(productOldPrice)
+                        .promotion(savedPromotion)
+                        .build();
 
                 System.out.printf("%s %f %f %s %n", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
             }

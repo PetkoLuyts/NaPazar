@@ -26,10 +26,10 @@ public class Product {
     private String title;
 
     @Column(name = "old_price")
-    private double oldPrice;
+    private Double oldPrice;
 
     @Column(name = "new_price")
-    private double newPrice;
+    private Double newPrice;
 
     @Column(name = "discount_phrase")
     private String discountPhrase;
