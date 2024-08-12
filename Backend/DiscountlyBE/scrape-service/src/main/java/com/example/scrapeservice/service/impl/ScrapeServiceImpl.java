@@ -5,7 +5,10 @@ import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
 import com.example.scrapeservice.repository.PromotionRepository;
 import com.example.scrapeservice.repository.StoreRepository;
+import com.example.scrapeservice.service.ProductService;
+import com.example.scrapeservice.service.PromotionService;
 import com.example.scrapeservice.service.ScrapeService;
+import com.example.scrapeservice.service.StoreService;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -29,7 +32,9 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     private final PromotionRepository promotionRepository;
 
-    private final StoreRepository storeRepository;
+    private final StoreService storeService;
+    private final ProductService productService;
+    private final PromotionService promotionService;
 
     @Override
     public void scrapeData() {
@@ -44,8 +49,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             Date billaPromotionStart = getBillaPromotionStart(document);
             Date billaPromotionEnd = getBillaPromotionEnd(document);
 
-            Store billaStore = storeRepository.findById(BILLA_ID)
-                    .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + BILLA_ID));
+            Store billaStore = storeService.getStoreById(BILLA_ID);
 
             Promotion billaPromotion = Promotion.builder()
                     .startDate(billaPromotionStart)
@@ -53,7 +57,7 @@ public class ScrapeServiceImpl implements ScrapeService {
                     .storeByStoreId(billaStore)
                     .build();
 
-            Promotion savedPromotion = promotionRepository.save(billaPromotion);
+            Promotion savedPromotion = promotionService.createPromotion(billaPromotion);
 
             Elements products = document.select("div.product");
 
@@ -66,11 +70,13 @@ public class ScrapeServiceImpl implements ScrapeService {
                 Product product = Product.builder()
                         .title(productTitle)
                         .oldPrice(productOldPrice)
-                        .newPrice(productOldPrice)
+                        .newPrice(productNewPrice)
+                        .discountPhrase(productDiscountPhrase)
                         .promotion(savedPromotion)
                         .build();
 
-                System.out.printf("%s %f %f %s %n", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
+                productService.createProduct(product);
+                //System.out.printf("%s %f %f %s %n", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -82,7 +88,11 @@ public class ScrapeServiceImpl implements ScrapeService {
             Element productTitleElement = product.selectFirst(className);
 
             if (productTitleElement != null) {
-                return productTitleElement.text().trim();
+                if (productTitleElement.text().length() > 255) {
+                    return productTitleElement.text().substring(0, 255);
+                }
+
+                return productTitleElement.text();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -96,7 +106,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             Element discountPhraseElement = product.selectFirst(className);
 
             if (discountPhraseElement != null) {
-                return discountPhraseElement.text().trim();
+                return discountPhraseElement.text().trim().substring(1);
             }
         } catch (Exception e) {
             e.printStackTrace();

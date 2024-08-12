@@ -4,4 +4,5 @@ import com.example.scrapeservice.model.Store;
 
 public interface StoreService {
     Store createStore(Store store);
+    Store getStoreById(int id);
 }
