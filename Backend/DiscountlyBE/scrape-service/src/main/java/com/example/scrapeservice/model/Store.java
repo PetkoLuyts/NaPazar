@@ -2,34 +2,25 @@ package com.example.scrapeservice.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.Objects;
+import java.util.Collection;
 
-@Builder
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-@Entity
-public class Promotions {
+@Table(name = "stores")
+public class Store {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     @Column(name = "id")
     private Integer id;
 
-    @ManyToOne
-    @JoinColumn(name = "store_id", referencedColumnName = "id", nullable = false)
-    private Stores storesByStoreId;
-
-    @Column(name = "start_date")
-    private Date startDate;
-
-    @Column(name = "end_date")
-    private Date endDate;
+    @Column(name = "name")
+    private String name;
 
     @Column(name = "created_by")
     private Integer createdBy;
@@ -42,4 +33,7 @@ public class Promotions {
 
     @Column(name = "updated_at")
     private Timestamp updatedAt;
+
+    @OneToMany(mappedBy = "storeByStoreId", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Collection<Promotion> promotions;
 }

@@ -1,9 +1,9 @@
 package com.example.scrapeservice.repository;
 
-import com.example.scrapeservice.model.Promotions;
+import com.example.scrapeservice.model.Store;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PromotionsRepository extends JpaRepository<Promotions, Integer> {
+public interface StoreRepository extends JpaRepository<Store,Integer> {
 }

@@ -1,4 +1,4 @@
-CREATE TABLE stores (
+CREATE TABLE IF NOT EXISTS stores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     created_by INT,

@@ -1,4 +1,4 @@
-CREATE TABLE promotions (
+CREATE TABLE IF NOT EXISTS promotions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
     start_date DATE NOT NULL,

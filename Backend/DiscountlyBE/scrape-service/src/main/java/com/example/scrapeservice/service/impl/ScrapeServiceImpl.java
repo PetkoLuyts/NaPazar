@@ -1,9 +1,9 @@
 package com.example.scrapeservice.service.impl;
 
-import com.example.scrapeservice.model.Promotions;
-import com.example.scrapeservice.model.Stores;
-import com.example.scrapeservice.repository.PromotionsRepository;
-import com.example.scrapeservice.repository.StoresRepository;
+import com.example.scrapeservice.model.Promotion;
+import com.example.scrapeservice.model.Store;
+import com.example.scrapeservice.repository.PromotionRepository;
+import com.example.scrapeservice.repository.StoreRepository;
 import com.example.scrapeservice.service.ScrapeService;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -26,9 +26,9 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     private static final int BILLA_ID = 1;
 
-    private final PromotionsRepository promotionsRepository;
+    private final PromotionRepository promotionRepository;
 
-    private final StoresRepository storesRepository;
+    private final StoreRepository storeRepository;
 
     @Override
     public void scrapeData() {
@@ -43,16 +43,16 @@ public class ScrapeServiceImpl implements ScrapeService {
             Date billaPromotionStart = getBillaPromotionStart(document);
             Date billaPromotionEnd = getBillaPromotionEnd(document);
 
-            Stores billaStore = storesRepository.findById(BILLA_ID)
+            Store billaStore = storeRepository.findById(BILLA_ID)
                     .orElseThrow(() -> new IllegalArgumentException("Store not found with ID: " + BILLA_ID));
 
-            Promotions billaPromotion = Promotions.builder()
+            Promotion billaPromotion = Promotion.builder()
                     .startDate(billaPromotionStart)
                     .endDate(billaPromotionEnd)
-                    .storesByStoreId(billaStore)
+                    .storeByStoreId(billaStore)
                     .build();
 
-            promotionsRepository.save(billaPromotion);
+            promotionRepository.save(billaPromotion);
 
             Elements products = document.select("div.product");
 
@@ -62,7 +62,7 @@ public class ScrapeServiceImpl implements ScrapeService {
                 Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");
                 String productDiscountPhrase = getProductDiscountPhrase(products.get(i), ".discount");
 
-                System.out.printf("%s %f %f %s", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
+                System.out.printf("%s %f %f %s %n", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
