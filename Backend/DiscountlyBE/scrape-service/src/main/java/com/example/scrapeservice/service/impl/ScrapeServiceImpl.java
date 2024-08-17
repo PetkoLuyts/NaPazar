@@ -75,8 +75,9 @@ public class ScrapeServiceImpl implements ScrapeService {
                         .promotion(savedPromotion)
                         .build();
 
-                productService.createProduct(product);
-                //System.out.printf("%s %f %f %s %n", productTitle, productOldPrice, productNewPrice, productDiscountPhrase);
+                if (product.getNewPrice() != null) {
+                    productService.createProduct(product);
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -106,7 +107,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             Element discountPhraseElement = product.selectFirst(className);
 
             if (discountPhraseElement != null) {
-                return discountPhraseElement.text().trim().substring(1);
+                return discountPhraseElement.text().trim().substring(2);
             }
         } catch (Exception e) {
             e.printStackTrace();
