@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.51.23",
+    "axios": "^1.7.4",
+    "qs": "^6.13.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.26.0"
   },
   "devDependencies": {
+    "@types/qs": "^6.9.15",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^6.21.0",

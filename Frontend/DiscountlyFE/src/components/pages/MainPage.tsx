@@ -1,4 +1,9 @@
 import React from "react";
+
+// UTILS
+import { useProducts } from "../../shared/queries";
+
+// COMPONENTS
 import Card from "../card/Card";
 
 const products = [
@@ -8,16 +13,19 @@ const products = [
 ];
 
 const MainPage: React.FC = () => {
+  const { data: productsData } = useProducts();
+
   return (
     <div
       style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}
     >
-      {products.map((product, index) => (
+      {productsData?.map((product, index) => (
         <Card
           key={index}
-          name={product.name}
+          title={product.title}
           oldPrice={product.oldPrice}
           newPrice={product.newPrice}
+          discountPhrase={product.discountPhrase}
         />
       ))}
     </div>
