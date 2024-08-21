@@ -13,7 +13,12 @@ public class ScrapeController {
     private final ScrapeService scrapeService;
 
     @PostMapping("")
-    public void scrapeData() {
-        scrapeService.scrapeData();
+    public void scrapeBillaData() {
+        scrapeService.scrapeBillaData();
+    }
+
+    @PostMapping("/lidl")
+    public void scrapeLidlData() {
+        scrapeService.scrapeLidlData();
     }
 }

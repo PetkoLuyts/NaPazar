@@ -4,7 +4,6 @@ import com.example.scrapeservice.model.Product;
 import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
 import com.example.scrapeservice.repository.PromotionRepository;
-import com.example.scrapeservice.repository.StoreRepository;
 import com.example.scrapeservice.service.ProductService;
 import com.example.scrapeservice.service.PromotionService;
 import com.example.scrapeservice.service.ScrapeService;
@@ -21,23 +20,26 @@ import java.io.IOException;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
 public class ScrapeServiceImpl implements ScrapeService {
-    @Value("${billa.categories}")
+    @Value("${billa.url}")
     private String billaCategoryUrl;
-
+    @Value("${lidl.url}")
+    private String lidlUrl;
     private static final int BILLA_ID = 1;
+    private static final int LIDL_ID = 2;
 
     private final PromotionRepository promotionRepository;
-
     private final StoreService storeService;
     private final ProductService productService;
     private final PromotionService promotionService;
 
     @Override
-    public void scrapeData() {
+    public void scrapeBillaData() {
         scrapeBillaPromotions();
     }
 
@@ -180,6 +182,49 @@ public class ScrapeServiceImpl implements ScrapeService {
             }
         }
 
+        return null;
+    }
+
+    @Override
+    public void scrapeLidlData() {
+        List<String> lidlCategories = getLidlCategoriesUrls();
+
+        System.out.println("test");
+    }
+
+    public List<String> getLidlCategoriesUrls() {
+        List<String> categoriesUrls = new ArrayList<>();
+        String promotionsUrl = getLidlPromotionsUrl();
+
+        if (promotionsUrl != null) {
+            try {
+                Document doc = Jsoup.connect(promotionsUrl).get();
+                Elements categories = doc.select("li.AHeroStageItems__Item a");
+
+                for (Element category : categories) {
+                    String categoryUrl = lidlUrl + category.attr("href");
+                    categoriesUrls.add(categoryUrl);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return categoriesUrls;
+    }
+
+    public String getLidlPromotionsUrl() {
+        try {
+            Document document = Jsoup.connect(lidlUrl).get();
+            Elements navItems = document.select(".n-header__main-navigation-link.n-header__main-navigation-link--first");
+
+            for (Element urlElement : navItems) {
+                if (urlElement.text().equals("Нови предложения")) {
+                    return lidlUrl + urlElement.parent().attr("href");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 }
