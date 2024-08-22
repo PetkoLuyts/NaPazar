@@ -8,6 +8,8 @@ import com.example.scrapeservice.service.ProductService;
 import com.example.scrapeservice.service.PromotionService;
 import com.example.scrapeservice.service.ScrapeService;
 import com.example.scrapeservice.service.StoreService;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -19,11 +21,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 @RequiredArgsConstructor
 @Service
@@ -162,7 +169,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             String[] promotionText = dateDiv.text().split(" ");
             try {
                 LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 5], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-                return Date.valueOf(localDate);
+                return convertToDate(localDate);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -178,7 +185,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             String[] promotionText = dateDiv.text().split(" ");
             try {
                 LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 2], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-                return Date.valueOf(localDate);
+                return convertToDate(localDate);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -187,24 +194,24 @@ public class ScrapeServiceImpl implements ScrapeService {
         return null;
     }
 
+    private Date convertToDate(LocalDate localDate) {
+        return java.util.Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
     @Override
     public void scrapeLidlData() {
         List<String> lidlCategories = getLidlCategoriesUrls();
 
         for(String lidlCategory : lidlCategories) {
-            List<String> productUrls = getLidlCategoryProductsUrl(lidlCategory);
-
-            for(String productUrl : productUrls) {
-
-
-            }
+            getLidlCategoryProductsUrl(lidlCategory);
         }
 
         System.out.println("test");
     }
 
-    public List<String> getLidlCategoryProductsUrl(String categoryUrl) {
+    public void getLidlCategoryProductsUrl(String categoryUrl) {
         List<String> categoryProductsUrls = new ArrayList<>();
+        Store lidlStore = storeService.getStoreById(LIDL_ID);
 
         try {
             Document doc = Jsoup.connect(categoryUrl).get();
@@ -219,24 +226,51 @@ public class ScrapeServiceImpl implements ScrapeService {
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject productData = jsonArray.getJSONObject(i);
 
-                        String title = productData.optJSONObject("keyfacts").optString("fullTitle", "N/A");
-                        String discountPhrase = productData.optJSONObject("price").optJSONObject("discount").optString("discountText", "N/A");
-                        double oldPrice = productData.optJSONObject("price").optDouble("oldPrice", 0.0);
-                        double newPrice = productData.optJSONObject("price").optDouble("price", 0.0);
-                        String quantity = productData.optJSONObject("price").optJSONObject("basePrice").optString("text", "N/A");
-                        String description = productData.optJSONObject("keyfacts").optString("description", "N/A");
-                        
-                        String promotionText = productDiv.select(".ribbon__text").text();
-                        String promotionStarts = extractPromotionStartDate(promotionText);
-                        String promotionEnds = extractPromotionEndDate(promotionText);
+                        JSONObject keyFactsObject = productData.optJSONObject("keyfacts");
+                        String productTitle = (keyFactsObject != null) ? keyFactsObject.optString("fullTitle", "N/A") : "N/A";
+                        String productDescription = (keyFactsObject != null) ? keyFactsObject.optString("description", "N/A") : "N/A";
+
+                        JSONObject priceObject = productData.optJSONObject("price");
+                        double productOldPrice = (priceObject != null) ? priceObject.optDouble("oldPrice", 0.0) : 0.0;
+                        double productNewPrice = (priceObject != null) ? priceObject.optDouble("price", 0.0) : 0.0;
+
+                        JSONObject discountObject = (priceObject != null) ? priceObject.optJSONObject("discount") : null;
+                        String productDiscountPhrase = (discountObject != null) ? discountObject.optString("discountText", "N/A") : "N/A";
+
+                        JSONObject basePriceObject = (priceObject != null) ? priceObject.optJSONObject("basePrice") : null;
+                        String productQuantity = (basePriceObject != null) ? basePriceObject.optString("text", "N/A") : "N/A";
+
+                        String promotionDateRange = extractPromotionDateRange(productData);
+                        PromotionInterval promotionInterval = getLidlProductPromotionInterval(promotionDateRange);
+
+                        if (promotionInterval != null && promotionInterval.promotionStarts != null) {
+
+                            Promotion productPromotion = Promotion.builder()
+                                    .startDate(promotionInterval.promotionStarts)
+                                    .endDate(promotionInterval.promotionExpires)
+                                    .storeByStoreId(lidlStore)
+                                    .build();
+
+                            promotionService.createPromotion(productPromotion);
+
+                            Product product = Product.builder()
+                                    .title(productTitle)
+                                    .oldPrice(productOldPrice)
+                                    .newPrice(productNewPrice)
+                                    .discountPhrase(productDiscountPhrase)
+                                    .promotion(productPromotion)
+                                    .build();
+
+                            productService.createProduct(product);
+
+                            System.out.println("Created Product: " + product.getTitle());
+                        }
                     }
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        return categoryProductsUrls;
     }
 
     public List<String> getLidlCategoriesUrls() {
@@ -275,23 +309,70 @@ public class ScrapeServiceImpl implements ScrapeService {
         return null;
     }
 
-    private String extractPromotionStartDate(String promotionText) {
-        if (promotionText.contains("от")) {
-            String[] parts = promotionText.split("от");
-            if (parts.length > 1) {
-                return parts[1].trim();
+    public PromotionInterval getLidlProductPromotionInterval(String promotionInterval) {
+        java.util.Date promotionStarts = null;
+        java.util.Date promotionExpires = null;
+        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+
+        try {
+            String[] words = promotionInterval.split("\\s+");
+
+            if (words[0].equalsIgnoreCase("само")) {
+                promotionStarts = null;
+            } else if (words.length >= 3) {
+                promotionStarts = convertToDate(words[words.length - 3], formatter);
             }
+
+            promotionExpires = convertToDate(words[words.length - 1], formatter);
+
+            if (promotionExpires == null && promotionStarts != null) {
+                promotionExpires = new Date(promotionStarts.getTime() + (7 * 24 * 60 * 60 * 1000L));
+            }
+
+            if (promotionStarts == null && promotionExpires == null) {
+                System.out.println("Skipping unparseable promotion interval: " + promotionInterval);
+                return null;
+            }
+
+        } catch (IndexOutOfBoundsException | DateTimeParseException e) {
+            System.out.println("Skipping promotion due to unparseable format: " + promotionInterval);
+            return null;
         }
-        return "N/A";
+
+        return new PromotionInterval(promotionStarts, promotionExpires);
     }
 
-    private String extractPromotionEndDate(String promotionText) {
-        if (promotionText.contains("-")) {
-            String[] parts = promotionText.split("-");
-            if (parts.length > 1) {
-                return parts[1].trim();
+    private static java.util.Date convertToDate(String dateString, SimpleDateFormat formatter) {
+        try {
+            String fullDateString = dateString + new SimpleDateFormat("yyyy").format(new java.util.Date());
+            return formatter.parse(fullDateString);
+        } catch (ParseException e) {
+            System.out.println("Failed to parse date: " + dateString);
+            return null;
+        }
+    }
+
+
+    private String extractPromotionDateRange(JSONObject productData) {
+        JSONObject stockAvailability = productData.optJSONObject("stockAvailability");
+        if (stockAvailability != null) {
+            JSONObject badgeInfo = stockAvailability.optJSONObject("badgeInfo");
+            if (badgeInfo != null) {
+                JSONArray badges = badgeInfo.optJSONArray("badges");
+                if (badges != null && badges.length() > 0) {
+                    String promotionDateRange = badges.getJSONObject(0).optString("text", "");
+                    return promotionDateRange;
+                }
             }
         }
-        return "N/A";
+        return null;
+    }
+
+
+    @Data
+    @AllArgsConstructor
+    private class PromotionInterval {
+        private java.util.Date promotionStarts;
+        private java.util.Date promotionExpires;
     }
 }

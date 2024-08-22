@@ -1,13 +1,10 @@
 package com.example.scrapeservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.Date;
 
 @Builder
 @AllArgsConstructor
@@ -26,9 +23,11 @@ public class Promotion {
     private Store storeByStoreId;
 
     @Column(name = "start_date")
+    @Temporal(TemporalType.DATE)
     private Date startDate;
 
     @Column(name = "end_date")
+    @Temporal(TemporalType.DATE)
     private Date endDate;
 
     @Column(name = "created_by")
