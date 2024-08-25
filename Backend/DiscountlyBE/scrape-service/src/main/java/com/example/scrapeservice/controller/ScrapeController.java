@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ScrapeController {
     private final ScrapeService scrapeService;
 
-    @PostMapping("")
+    @PostMapping("/billa")
     public void scrapeBillaData() {
         scrapeService.scrapeBillaData();
     }
@@ -20,5 +20,10 @@ public class ScrapeController {
     @PostMapping("/lidl")
     public void scrapeLidlData() {
         scrapeService.scrapeLidlData();
+    }
+
+    @PostMapping("/kaufland")
+    public void scrapeKauflandData() {
+        scrapeService.scrapeKauflandData();
     }
 }

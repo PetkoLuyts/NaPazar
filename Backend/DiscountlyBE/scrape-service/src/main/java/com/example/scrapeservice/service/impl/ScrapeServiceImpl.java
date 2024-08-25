@@ -39,6 +39,8 @@ public class ScrapeServiceImpl implements ScrapeService {
     private String billaCategoryUrl;
     @Value("${lidl.url}")
     private String lidlUrl;
+    @Value("${kaufland.url}")
+    private String kauflandUrl;
     private static final int BILLA_ID = 1;
     private static final int LIDL_ID = 2;
 
@@ -50,6 +52,20 @@ public class ScrapeServiceImpl implements ScrapeService {
     @Override
     public void scrapeBillaData() {
         scrapeBillaPromotions();
+    }
+
+    @Override
+    public void scrapeLidlData() {
+        List<String> lidlCategories = getLidlCategoriesUrls();
+
+        for(String lidlCategory : lidlCategories) {
+            getLidlCategoryProductsUrl(lidlCategory);
+        }
+    }
+
+    @Override
+    public void scrapeKauflandData() {
+
     }
 
     private void scrapeBillaPromotions() {
@@ -196,17 +212,6 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     private Date convertToDate(LocalDate localDate) {
         return java.util.Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-    }
-
-    @Override
-    public void scrapeLidlData() {
-        List<String> lidlCategories = getLidlCategoriesUrls();
-
-        for(String lidlCategory : lidlCategories) {
-            getLidlCategoryProductsUrl(lidlCategory);
-        }
-
-        System.out.println("test");
     }
 
     public void getLidlCategoryProductsUrl(String categoryUrl) {
@@ -367,7 +372,6 @@ public class ScrapeServiceImpl implements ScrapeService {
         }
         return null;
     }
-
 
     @Data
     @AllArgsConstructor
