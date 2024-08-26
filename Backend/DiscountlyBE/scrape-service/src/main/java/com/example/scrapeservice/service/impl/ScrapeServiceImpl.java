@@ -65,7 +65,9 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     @Override
     public void scrapeKauflandData() {
+        var urls = getKauflandCategoriesUrls();
 
+        System.out.println(urls);
     }
 
     private void scrapeBillaPromotions() {
@@ -370,6 +372,104 @@ public class ScrapeServiceImpl implements ScrapeService {
                 }
             }
         }
+        return null;
+    }
+
+    public List<String> getKauflandCategoriesUrls() {
+        List<String> categories = new ArrayList<>();
+
+        try {
+            List<String> promotionsUrls = getKauflandPromotionsUrls();
+            if (promotionsUrls.isEmpty()) {
+                return categories;
+            }
+
+            Document document = Jsoup.connect(promotionsUrls.get(1)).get();
+
+            Elements buttons = document.select(".a-button--primary");
+            String mainCategoryUrl = null;
+
+            for (Element button : buttons) {
+                Element linkElement = button.selectFirst("a");
+
+                if (linkElement != null && linkElement.text().startsWith("Разгледай всички предложения")) {
+                    mainCategoryUrl = linkElement.attr("href");
+                    break;
+                }
+            }
+
+            if (mainCategoryUrl == null) {
+                return categories;
+            }
+
+            if (!mainCategoryUrl.startsWith("https")) {
+                mainCategoryUrl = kauflandUrl + mainCategoryUrl;
+            }
+
+            document = Jsoup.connect(mainCategoryUrl).get();
+
+            Elements promotionSections = new Elements(
+                    document.select("ul.m-accordion__list.m-accordion__list--level-2").subList(0, 2)
+            );
+
+            for (Element section : promotionSections) {
+                Elements promotionLinks = section.select("a");
+                for (Element link : promotionLinks) {
+                    String categoryUrl = link.attr("href");
+                    if (!categoryUrl.startsWith("https")) {
+                        categoryUrl = kauflandUrl + categoryUrl;
+                    }
+                    categories.add(categoryUrl);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return categories;
+    }
+
+    public List<String> getKauflandPromotionsUrls() {
+        List<String> promotionsUrls = new ArrayList<>();
+        String mainPromotionsUrl = getKauflandPromotionsMain();
+
+        if (mainPromotionsUrl == null) {
+            return promotionsUrls;
+        }
+
+        try {
+            Document document = Jsoup.connect(mainPromotionsUrl).get();
+            Elements components = document.select(".textimageteaser");
+
+            for (Element component : components) {
+                String url = component.selectFirst("a").attr("href");
+                if (!url.startsWith("https:")) {
+                    url = "https://www.kaufland.bg" + url;
+                }
+                promotionsUrls.add(url);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return promotionsUrls;
+    }
+
+    public String getKauflandPromotionsMain() {
+        try {
+            Document document = Jsoup.connect(kauflandUrl).get();
+
+            Elements navigationLinks = document.select(".m-accordion__link");
+
+            for (Element link : navigationLinks) {
+                if (link.select("span").text().startsWith("Предложения")) {
+                    return "https://www.kaufland.bg" + link.attr("href");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
         return null;
     }
 
