@@ -3,7 +3,6 @@ package com.example.scrapeservice.service.impl;
 import com.example.scrapeservice.model.Product;
 import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
-import com.example.scrapeservice.repository.PromotionRepository;
 import com.example.scrapeservice.service.ProductService;
 import com.example.scrapeservice.service.PromotionService;
 import com.example.scrapeservice.service.ScrapeService;
@@ -27,10 +26,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -43,8 +40,7 @@ public class ScrapeServiceImpl implements ScrapeService {
     private String kauflandUrl;
     private static final int BILLA_ID = 1;
     private static final int LIDL_ID = 2;
-
-    private final PromotionRepository promotionRepository;
+    private static final int KAUFLAND_ID = 3;
     private final StoreService storeService;
     private final ProductService productService;
     private final PromotionService promotionService;
@@ -65,9 +61,73 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     @Override
     public void scrapeKauflandData() {
-        var urls = getKauflandCategoriesUrls();
+        List<String> categoryUrls = getKauflandCategoriesUrls();
+        Store kauflandStore = storeService.getStoreById(KAUFLAND_ID);
 
-        System.out.println(urls);
+        for (String categoryUrl : categoryUrls) {
+            List<String> productUrls = getKauflandCategoryProductsUrl(categoryUrl);
+
+            for (String productUrl : productUrls) {
+                try {
+                    Document productPage = Jsoup.connect(productUrl).get();
+
+//                    String productImageUrlWrapper = getKauflandProductImageUrl(productPage, Arrays.asList("a-image-responsive", "a-image-responsive--preview-knockout"));
+//                    String productImageUrl;
+//                    int resizeIndex = productImageUrlWrapper.indexOf("?MYRAVRESIZE");
+//                    if (resizeIndex != -1) {
+//                        productImageUrl = productImageUrlWrapper.substring(0, resizeIndex);
+//                    } else {
+//                        productImageUrl = productImageUrlWrapper;
+//                    }
+
+                    String promotionText = getKauflandPromotionText(productPage, Arrays.asList("a-eye-catcher", "a-eye-catcher--secondary"));
+                    Date promotionStarts = null;
+                    Date promotionExpires = null;
+                    if (promotionText != null) {
+                        String[] parts = promotionText.split("\\s+");
+                        String startDateStr = parts[0]; // First date in the range
+                        String endDateStr = parts[parts.length - 1]; // Last date in the range
+
+                        promotionStarts = convertToDate(parsePartialDate(startDateStr));
+                        promotionExpires = convertToDate(parsePartialDate(endDateStr));
+                    }
+
+                    String productSubtitle = getKauflandProductSubtitle(productPage, ".t-offer-detail__subtitle");
+                    String productTitle = getProductTitle(productPage, ".t-offer-detail__title");
+                    String productDiscountPhrase = getKauflandProductDiscountPhrase(productPage, ".a-pricetag__discount", ".a-pricetag__old-price");
+                    Double productOldPrice = getKauflandProductOldPrice(productPage, ".a-pricetag__old-price");
+                    Double productNewPrice = getProductNewPrice(productPage, ".a-pricetag__price");
+                    String productBasePrice = getKauflandProductBasePrice(productPage, ".t-offer-detail__basic-price");
+                    String productQuantity = getProductQuantity(productPage, ".t-offer-detail__quantity");
+                    String productDescription = getKauflandProductDescription(productPage, ".t-offer-detail__description");
+                    String promotionMessage = getKauflandProductPromotionMessage(productPage, ".t-offer-detail__mpa", ".t-offer-detail__promo-message");
+
+                    if (productTitle != null && !productDiscountPhrase.equals("само") && !productDiscountPhrase.equals("тази седмица"))
+                    {
+                        Promotion promotion = Promotion.builder()
+                                .storeByStoreId(kauflandStore)
+                                .startDate(promotionStarts)
+                                .endDate(promotionExpires)
+                                .build();
+
+                        Promotion savedPromotion = promotionService.createPromotion(promotion);
+
+                        Product product = Product.builder()
+                                .title(productTitle)
+                                .oldPrice(productOldPrice)
+                                .newPrice(productNewPrice)
+                                .discountPhrase(productDiscountPhrase)
+                                .promotion(savedPromotion)
+                                .build();
+
+                        productService.createProduct(product);
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void scrapeBillaPromotions() {
@@ -210,6 +270,17 @@ public class ScrapeServiceImpl implements ScrapeService {
         }
 
         return null;
+    }
+
+    private LocalDate parsePartialDate(String dateStr) {
+        // Append the current year to the date string
+        int currentYear = LocalDate.now().getYear();
+        String fullDateStr = dateStr + currentYear; // Add the year in the format dd.MM.yyyy
+
+        // Define a formatter to parse the day, month, and year
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        return LocalDate.parse(fullDateStr, formatter);
     }
 
     private Date convertToDate(LocalDate localDate) {
@@ -362,17 +433,41 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     private String extractPromotionDateRange(JSONObject productData) {
         JSONObject stockAvailability = productData.optJSONObject("stockAvailability");
+
         if (stockAvailability != null) {
             JSONObject badgeInfo = stockAvailability.optJSONObject("badgeInfo");
+
             if (badgeInfo != null) {
                 JSONArray badges = badgeInfo.optJSONArray("badges");
+
                 if (badges != null && badges.length() > 0) {
-                    String promotionDateRange = badges.getJSONObject(0).optString("text", "");
-                    return promotionDateRange;
+                    return badges.getJSONObject(0).optString("text", "");
                 }
             }
         }
         return null;
+    }
+
+    public List<String> getKauflandCategoryProductsUrl(String categoryUrl) {
+        List<String> categoryProductsUrls = new ArrayList<>();
+
+        try {
+            Document document = Jsoup.connect(categoryUrl).get();
+
+            Elements products = document.select("a.m-offer-tile__link, a.u-button--hover-children");
+
+            for (Element product : products) {
+                if ("_self".equals(product.attr("target"))) {
+                    String url = "https://www.kaufland.bg" + product.attr("href");
+                    categoryProductsUrls.add(url);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return categoryProductsUrls;
     }
 
     public List<String> getKauflandCategoriesUrls() {
@@ -472,6 +567,185 @@ public class ScrapeServiceImpl implements ScrapeService {
 
         return null;
     }
+
+    public String getKauflandProductImageUrl(Document document, List<String> classNames) {
+        try {
+            Elements imgElements = document.select("img." + String.join(".", classNames));
+            if (!imgElements.isEmpty()) {
+                return imgElements.first().attr("src");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public String getKauflandPromotionText(Document document, List<String> classNames) {
+        try {
+            Elements divElements = document.select("div." + String.join(".", classNames));
+            if (!divElements.isEmpty()) {
+                Element spanElement = divElements.first().selectFirst("span");
+                if (spanElement != null) {
+                    return spanElement.text().trim();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public String getKauflandProductSubtitle(Document soup, String className) {
+        try {
+            Element subtitleElement = soup.selectFirst(className);
+            if (subtitleElement != null) {
+                return subtitleElement.text().trim();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public String getKauflandProductDiscountPhrase(Document soup, String className1, String className2) {
+        try {
+            Element discountElement = soup.selectFirst(className1);
+            if (discountElement != null) {
+                return discountElement.text().trim();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            Element oldPriceElement = soup.selectFirst(className2);
+
+            if (oldPriceElement != null) {
+                try {
+                    Float.parseFloat(oldPriceElement.text().trim().replace(",", "."));
+                    return null;
+                } catch (NumberFormatException e) {
+                    return oldPriceElement.text().trim();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public Double getProductNewPrice(Document document, String className) {
+        try {
+            Element priceElement = document.selectFirst(className);
+
+            if (priceElement != null) {
+                return Double.parseDouble(priceElement.text().trim().replace(",", "."));
+            }
+        } catch (NumberFormatException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public Double getKauflandProductOldPrice(Document soup, String className) {
+        try {
+            Element oldPriceElement = soup.selectFirst(className);
+
+            if (oldPriceElement != null) {
+                // Extract the text from the element
+                String oldPriceText = oldPriceElement.text().trim();
+
+                // Print for debugging
+                System.out.println("Raw Price Text: " + oldPriceText);
+
+                // Convert text to double
+                return Double.parseDouble(oldPriceText.replace(",", "."));
+            }
+        } catch (NumberFormatException | NullPointerException e) {
+            return null;
+        }
+
+        return null;
+    }
+
+
+    public String getKauflandProductBasePrice(Document soup, String className) {
+        try {
+            Element basePriceElement = soup.selectFirst(className);
+            if (basePriceElement != null) {
+                return basePriceElement.text().trim();
+            }
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public String getProductQuantity(Document soup, String className) {
+        try {
+            Element quantityElement = soup.selectFirst(className);
+            if (quantityElement != null) {
+                // Extract and return the quantity text, trimming any extra spaces
+                return quantityElement.text().trim();
+            }
+        } catch (NullPointerException e) {
+            // Handle the case where the element is missing
+            e.printStackTrace();
+        }
+
+        // Return null if the quantity cannot be determined
+        return null;
+    }
+
+    public String getKauflandProductDescription(Document soup, String className) {
+        try {
+            Element descriptionElement = soup.selectFirst(className);
+            if (descriptionElement != null) {
+                Element paragraph = descriptionElement.selectFirst("p");
+                if (paragraph != null) {
+                    // Convert the element to a string and replace "<br/>" with a newline character
+                    String descriptionWrapper = paragraph.html().replace("<br>", "\n").replace("<br/>", "\n");
+
+                    // Split the description into lines, filter out lines with "p>" and trim them
+                    List<String> descriptionLines = Arrays.stream(descriptionWrapper.split("\n"))
+                            .filter(line -> !line.contains("p>"))
+                            .map(String::trim)
+                            .collect(Collectors.toList());
+
+                    // Join the lines back together with newline characters
+                    return String.join("\n", descriptionLines);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null; // Return null if the description cannot be determined
+    }
+
+    public String getKauflandProductPromotionMessage(Document soup, String className1, String className2) {
+        try {
+            Element promotionMessageElement = soup.selectFirst(className1);
+            if (promotionMessageElement != null) {
+                return promotionMessageElement.text().trim();
+            } else {
+                promotionMessageElement = soup.selectFirst(className2);
+                if (promotionMessageElement != null) {
+                    return promotionMessageElement.text().trim();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
 
     @Data
     @AllArgsConstructor
