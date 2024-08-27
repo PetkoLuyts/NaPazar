@@ -12,6 +12,8 @@ import {
   FormControlLabel,
   FormGroup,
 } from "@mui/material";
+import { Flexbox } from "../../shared/components/Flexbox";
+import { SearchField } from "../../shared/components/SearchField";
 
 // TYPES
 import { SearchProductParams } from "../../products/types";
@@ -56,44 +58,38 @@ const MainPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "16px" }}>
-      <TextField
-        label="Search Products"
-        variant="outlined"
-        fullWidth
-        value={searchTerm}
-        onChange={handleSearchChange}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
-        style={{ marginBottom: "16px" }}
-      />
-
-      <FormGroup row style={{ marginBottom: "16px" }}>
-        {Object.entries(STORE_IDS).map(([storeName, storeId]) => (
-          <FormControlLabel
-            key={storeId}
-            control={
-              <Checkbox
-                value={storeId}
-                onChange={handleStoreChange}
-                checked={selectedStores.includes(storeId)}
-              />
-            }
-            label={storeName}
-          />
-        ))}
-      </FormGroup>
+    <Flexbox direction="column" sx={{ padding: "16px", height: "100vh" }}>
+      <Flexbox
+        justifyContent="flex-start"
+        alignItems="center"
+        sx={{ marginBottom: "16px", width: "100%" }}
+      >
+        <SearchField
+          value={searchTerm}
+          onChange={handleSearchChange}
+          sx={{ flexGrow: 1, maxWidth: "200px" }}
+        />
+        <FormGroup row sx={{ marginLeft: "16px" }}>
+          {Object.entries(STORE_IDS).map(([storeName, storeId]) => (
+            <FormControlLabel
+              key={storeId}
+              control={
+                <Checkbox
+                  value={storeId}
+                  onChange={handleStoreChange}
+                  checked={selectedStores.includes(storeId)}
+                />
+              }
+              label={storeName}
+            />
+          ))}
+        </FormGroup>
+      </Flexbox>
 
       {isLoading && <p>Loading...</p>}
       {error && <p>Error fetching products</p>}
-      <div
-        style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}
-      >
+      {productsData?.length === 0 && <p>No products found.</p>}
+      <Flexbox justifyContent="center" flexWrap="wrap">
         {productsData?.map((product, index) => (
           <Card
             key={index}
@@ -103,8 +99,8 @@ const MainPage: React.FC = () => {
             discountPhrase={product.discountPhrase}
           />
         ))}
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 };
 
