@@ -4,3 +4,8 @@ export interface ProductResponse {
   newPrice: number;
   discountPhrase: string;
 }
+
+export interface SearchProductParams {
+  searchTerm?: string;
+  storeIds?: string;
+}

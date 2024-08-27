@@ -8,7 +8,9 @@ import com.example.scrapeservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -22,11 +24,20 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.save(product);
     }
 
-    @Override
-    public List<ProductDTO> getAllProducts() {
+    public List<ProductDTO> getAllProducts(String searchTerm, String storeIds) {
+        List<Integer> storeIdList = storeIds != null ?
+                Arrays.stream(storeIds.split(","))
+                        .map(String::trim)
+                        .map(Integer::parseInt).toList()
+                : List.of();
+
         return productRepository.findAll()
                 .stream()
+                .filter(product ->
+                        (searchTerm == null || product.getTitle().toLowerCase().contains(searchTerm.toLowerCase())) &&
+                                (storeIdList.isEmpty() || storeIdList.contains(product.getPromotion().getStoreByStoreId().getId()))
+                )
                 .map(productDTOMapper)
-                .toList();
+                .collect(Collectors.toList());
     }
 }

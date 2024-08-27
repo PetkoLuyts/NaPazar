@@ -8,5 +8,5 @@ import java.util.List;
 public interface ProductService {
     Product createProduct(Product product);
 
-    List<ProductDTO> getAllProducts();
+    List<ProductDTO> getAllProducts(String searchTerm, String storeIds);
 }
