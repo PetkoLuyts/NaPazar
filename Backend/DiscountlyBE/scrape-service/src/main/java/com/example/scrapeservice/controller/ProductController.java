@@ -14,7 +14,6 @@ import java.util.List;
 @RequestMapping("/product")
 @RestController
 public class ProductController {
-
     private final ProductService productService;
 
     @GetMapping ("/all")
