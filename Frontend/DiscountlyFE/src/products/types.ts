@@ -9,3 +9,9 @@ export interface SearchProductParams {
   searchTerm?: string;
   storeIds?: string;
 }
+
+export interface PaymentInfoDTO {
+  amount: number;
+  currency: string;
+  receiptEmail: string | undefined;
+}
