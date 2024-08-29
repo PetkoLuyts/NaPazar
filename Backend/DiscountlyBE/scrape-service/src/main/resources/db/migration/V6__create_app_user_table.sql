@@ -5,6 +5,7 @@ CREATE TABLE app_user
     password VARCHAR(100),
     name VARCHAR(100),
     surname VARCHAR(100),
+    role ENUM('USER') NOT NULL,
     blacklisted BIT,
     active BIT,
     created_by INT,

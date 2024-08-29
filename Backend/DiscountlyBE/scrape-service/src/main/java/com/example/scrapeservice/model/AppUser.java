@@ -46,6 +46,9 @@ public class AppUser extends Audit implements UserDetails {
     @Transient
     private List<GrantedAuthority> authorities;
 
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
