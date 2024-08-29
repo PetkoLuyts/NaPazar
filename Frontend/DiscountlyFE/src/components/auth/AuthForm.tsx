@@ -1,11 +1,28 @@
 import React, { useState } from "react";
+import { apiCalls } from "../../shared/apiCalls";
 import "./AuthForm.css";
 
 const AuthForm: React.FC = () => {
   const [isSignUpActive, setIsSignUpActive] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const toggleForm = () => {
     setIsSignUpActive(!isSignUpActive);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const request = { email, password };
+    const endpoint = isSignUpActive ? apiCalls.register : apiCalls.authenticate;
+
+    try {
+      const response = await endpoint(request);
+      console.log(response);
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
   };
 
   return (
@@ -14,20 +31,40 @@ const AuthForm: React.FC = () => {
       id="container"
     >
       <div className="form-container sign-up">
-        <form>
+        <form onSubmit={handleSubmit}>
           <h1>Регистрация</h1>
           <span>използвайте мейл и парола</span>
-          <input type="email" placeholder="Email" />
-          <input type="password" placeholder="Password" />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           <button type="submit">Регистрирай се</button>
         </form>
       </div>
       <div className="form-container sign-in">
-        <form>
+        <form onSubmit={handleSubmit}>
           <h1>Влез</h1>
           <span>използвай мейл и парола</span>
-          <input type="email" placeholder="Мейл" />
-          <input type="password" placeholder="Парола" />
+          <input
+            type="email"
+            placeholder="Мейл"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Парола"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           <a href="#">Забравена парола?</a>
           <button type="submit">Влез</button>
         </form>
