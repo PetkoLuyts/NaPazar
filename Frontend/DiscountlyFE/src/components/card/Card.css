@@ -5,6 +5,8 @@
   margin: 16px;
   width: 250px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55);
 }
 
 .card-title {

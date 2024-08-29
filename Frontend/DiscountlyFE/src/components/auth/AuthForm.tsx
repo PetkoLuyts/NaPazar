@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { apiCalls } from "../../shared/apiCalls";
 import "./AuthForm.css";
+import { useNavigate } from "react-router-dom";
 
 const AuthForm: React.FC = () => {
   const [isSignUpActive, setIsSignUpActive] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const toggleForm = () => {
     setIsSignUpActive(!isSignUpActive);
@@ -20,6 +22,7 @@ const AuthForm: React.FC = () => {
     try {
       const response = await endpoint(request);
       console.log(response);
+      navigate("/");
     } catch (error) {
       console.error("An error occurred:", error);
     }

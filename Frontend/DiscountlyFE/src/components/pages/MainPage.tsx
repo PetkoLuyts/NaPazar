@@ -55,11 +55,7 @@ const MainPage: React.FC = () => {
         alignItems="center"
         sx={{ marginBottom: "16px", width: "100%" }}
       >
-        <SearchField
-          value={searchTerm}
-          onChange={handleSearchChange}
-          sx={{ flexGrow: 1, maxWidth: "200px" }}
-        />
+        <SearchField value={searchTerm} onChange={handleSearchChange} />
         <FormGroup row sx={{ marginLeft: "16px" }}>
           {Object.entries(STORE_IDS).map(([storeName, storeId]) => (
             <FormControlLabel
