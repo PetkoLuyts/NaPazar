@@ -4,6 +4,7 @@ import com.example.scrapeservice.dto.AuthenticationRequest;
 import com.example.scrapeservice.dto.AuthenticationResponse;
 import com.example.scrapeservice.dto.RegisterRequest;
 import com.example.scrapeservice.model.AppUser;
+import com.example.scrapeservice.model.Role;
 import com.example.scrapeservice.model.Token;
 import com.example.scrapeservice.model.TokenType;
 import com.example.scrapeservice.repository.TokenRepository;
@@ -35,7 +36,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = AppUser.builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .role(request.role())
+                .role(Role.USER)
                 .build();
 
         var savedUser = repository.save(user);
