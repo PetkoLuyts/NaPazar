@@ -10,6 +10,6 @@ CREATE TABLE app_user
     active BIT,
     created_by INT,
     updated_by INT,
-    created_at DATETIME NOT NULL,
+    created_at DATETIME,
     updated_at DATETIME
 );
