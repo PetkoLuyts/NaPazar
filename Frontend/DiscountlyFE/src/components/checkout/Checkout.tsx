@@ -1,5 +1,8 @@
 import React from "react";
 
+// HOOKS
+import { useEffect, useState } from "react";
+
 const Checkout: React.FC = () => {
   return (
     <div>
