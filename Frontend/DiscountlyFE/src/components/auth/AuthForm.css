@@ -9,21 +9,20 @@
 
 body {
   background-color: #c9d6ff;
-
   background: linear-gradient(to right, #e2e2e2, #c9d6ff);
-
   background-image: url("src/images/MixCollage-29-Aug-2024-03-46-PM-3338.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-size: cover; /* Ensures the image covers the entire background */
+  background-position: center; /* Centers the background image */
+  background-repeat: no-repeat; /* Prevents the background image from repeating */
 
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  height: 100vh;
+
+  min-height: 100vh; /* Ensures the body takes up at least the full viewport height */
   margin: 0;
-  padding-top: 176px;
+  padding-top: 50px;
 }
 
 .container {
@@ -35,6 +34,7 @@ body {
   width: 768px;
   max-width: 100%;
   min-height: 480px;
+  box-shadow: 5px 10px 18px #bcbcbc;
 }
 
 .container p {

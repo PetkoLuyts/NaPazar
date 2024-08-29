@@ -5,13 +5,7 @@ import { useProducts } from "../../shared/queries";
 
 // COMPONENTS
 import Card from "../card/Card";
-import {
-  TextField,
-  InputAdornment,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-} from "@mui/material";
+import { Checkbox, FormControlLabel, FormGroup } from "@mui/material";
 import { Flexbox } from "../../shared/components/Flexbox";
 import { SearchField } from "../../shared/components/SearchField";
 
@@ -20,9 +14,6 @@ import { SearchProductParams } from "../../products/types";
 
 // HOOKS
 import { useDebounce } from "../../hooks/useDebounce";
-
-// ICONS
-import SearchIcon from "@mui/icons-material/Search";
 
 // Store IDs
 const STORE_IDS = {

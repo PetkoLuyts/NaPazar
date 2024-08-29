@@ -5,6 +5,7 @@ import MainPage from "./components/pages/MainPage";
 import Checkout from "./components/checkout/Checkout";
 import "./App.css";
 import AuthForm from "./components/auth/AuthForm";
+import Footer from "./components/footer/Footer";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/auth" element={<AuthForm />} />
           </Routes>
+          <Footer />
         </div>
       </Router>
     </QueryClientProvider>
