@@ -28,7 +28,7 @@ export const SearchField: React.FC<SearchFieldProps> = ({
       <SearchIcon sx={{ color: "action.active", mr: 1, my: 0.5 }} />
       <TextField
         id="input-with-search-icon"
-        label="Search Products"
+        label="Търси продукт"
         variant="standard"
         value={value}
         onChange={onChange}

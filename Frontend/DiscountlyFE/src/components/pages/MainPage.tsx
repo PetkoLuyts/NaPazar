@@ -33,7 +33,7 @@ const MainPage: React.FC = () => {
   const searchParams: SearchProductParams & { page: number; size: number } = {
     searchTerm: debouncedSearchTerm,
     storeIds: selectedStores.length ? selectedStores.join(",") : undefined,
-    page: currentPage - 1, // Backend expects 0-based index
+    page: currentPage - 1,
     size: pageSize,
   };
 
@@ -98,9 +98,9 @@ const MainPage: React.FC = () => {
         </FormGroup>
       </Flexbox>
 
-      {isLoading && <p>Loading...</p>}
-      {error && <p>Error fetching products</p>}
-      {productsData.length === 0 && <p>No products found.</p>}
+      {isLoading && <p>Зареждане...</p>}
+      {error && <p>Грешка при зареждане на продукти.</p>}
+      {productsData.length === 0 && <p>Няма намерени продукти.</p>}
       <Flexbox justifyContent="center" flexWrap="wrap">
         {productsData.map((product, index) => (
           <Card

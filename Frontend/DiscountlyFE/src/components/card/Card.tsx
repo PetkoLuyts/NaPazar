@@ -16,9 +16,9 @@ const Card: React.FC<CardProps> = ({
   return (
     <div className="card">
       <h2 className="card-title">{title}</h2>
-      <p className="card-old-price">Old Price: ${oldPrice}</p>
-      <p className="card-new-price">New Price: ${newPrice}</p>
-      <p className="card-discount-phrase">Discount Phrase: ${discountPhrase}</p>
+      <p className="card-old-price">Стара цена: {oldPrice}лв</p>
+      <p className="card-new-price">Нова цена: {newPrice}лв</p>
+      <p className="card-discount-phrase">Намаление: {discountPhrase}</p>
     </div>
   );
 };

@@ -15,7 +15,15 @@ const PaginationComponent: React.FC<PaginationComponentProps> = ({
   onPageChange,
 }) => {
   return (
-    <Stack spacing={2} sx={{ alignItems: "center", marginTop: "16px" }}>
+    <Stack
+      spacing={2}
+      sx={{
+        alignItems: "center",
+        marginTop: "16px",
+        borderRadius: "4px",
+        backgroundColor: "rgba(255, 255, 255, 0.8)",
+      }}
+    >
       <Pagination
         count={totalPages}
         page={currentPage}
