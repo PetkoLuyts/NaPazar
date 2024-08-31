@@ -8,6 +8,7 @@ import Card from "../card/Card";
 import { Checkbox, FormControlLabel, FormGroup } from "@mui/material";
 import { Flexbox } from "../../shared/components/Flexbox";
 import { SearchField } from "../../shared/components/SearchField";
+import PaginationComponent from "../pagination/PaginationComponent";
 
 // TYPES
 import { SearchProductParams } from "../../products/types";
@@ -56,7 +57,16 @@ const MainPage: React.FC = () => {
         sx={{ marginBottom: "16px", width: "100%" }}
       >
         <SearchField value={searchTerm} onChange={handleSearchChange} />
-        <FormGroup row sx={{ marginLeft: "16px" }}>
+        <FormGroup
+          row
+          sx={{
+            marginLeft: "16px",
+            backgroundColor: "rgba(255, 255, 255, 0.8)",
+            padding: "8px",
+            borderRadius: "4px",
+            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",
+          }}
+        >
           {Object.entries(STORE_IDS).map(([storeName, storeId]) => (
             <FormControlLabel
               key={storeId}
@@ -87,6 +97,8 @@ const MainPage: React.FC = () => {
           />
         ))}
       </Flexbox>
+
+      <PaginationComponent />
     </Flexbox>
   );
 };
