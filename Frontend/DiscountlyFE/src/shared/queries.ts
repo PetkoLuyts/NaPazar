@@ -7,7 +7,9 @@ import { apiCalls } from "./apiCalls";
 import { USE_PRODUCTS_QUERY_KEY } from "./queryKeys";
 import { SearchProductParams } from "../products/types";
 
-export const useProducts = (params: SearchProductParams) =>
+export const useProducts = (
+  params: SearchProductParams & { page: number; size: number }
+) =>
   useQuery({
     queryKey: [USE_PRODUCTS_QUERY_KEY, params],
     queryFn: () => apiCalls.getProducts(params),

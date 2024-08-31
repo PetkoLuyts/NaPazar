@@ -12,9 +12,15 @@ import {
 } from "../components/auth/types";
 
 // PRODUCTS
-const getProducts = async (params: SearchProductParams) => {
+const getProducts = async (
+  params: SearchProductParams & { page: number; size: number }
+) => {
   const queryString = createQueryString(params);
-  const response = await call<ProductResponse[]>({
+  const response = await call<{
+    products: ProductResponse[];
+    totalPages: number;
+    totalElements: number;
+  }>({
     url: `/product/all${queryString}`,
     method: "GET",
   });

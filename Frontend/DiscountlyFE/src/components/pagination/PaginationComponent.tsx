@@ -1,16 +1,28 @@
 // COMPONENTS
+import React from "react";
 import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
-import { Flexbox } from "../../shared/components/Flexbox";
 
-const PaginationComponent: React.FC = () => {
+interface PaginationComponentProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (event: React.ChangeEvent<unknown>, page: number) => void;
+}
+
+const PaginationComponent: React.FC<PaginationComponentProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
   return (
-    <Flexbox justifyContent="center" alignItems="center">
-      <Stack spacing={2}>
-        <Pagination count={10} shape="rounded" size="large" />
-        <Pagination count={10} variant="outlined" shape="rounded" />
-      </Stack>
-    </Flexbox>
+    <Stack spacing={2} sx={{ alignItems: "center", marginTop: "16px" }}>
+      <Pagination
+        count={totalPages}
+        page={currentPage}
+        onChange={onPageChange}
+        shape="rounded"
+      />
+    </Stack>
   );
 };
 

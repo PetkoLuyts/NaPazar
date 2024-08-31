@@ -16,7 +16,6 @@ import { SearchProductParams } from "../../products/types";
 // HOOKS
 import { useDebounce } from "../../hooks/useDebounce";
 
-// Store IDs
 const STORE_IDS = {
   Billa: 1,
   Lidl: 2,
@@ -26,18 +25,26 @@ const STORE_IDS = {
 const MainPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStores, setSelectedStores] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const searchParams: SearchProductParams = {
+  const searchParams: SearchProductParams & { page: number; size: number } = {
     searchTerm: debouncedSearchTerm,
     storeIds: selectedStores.length ? selectedStores.join(",") : undefined,
+    page: currentPage - 1, // Backend expects 0-based index
+    size: pageSize,
   };
 
-  const { data: productsData, error, isLoading } = useProducts(searchParams);
+  const { data, error, isLoading } = useProducts(searchParams);
+
+  const productsData = data?.products || [];
+  const totalPages = data?.totalPages || 1;
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
+    setCurrentPage(1);
   };
 
   const handleStoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,6 +54,14 @@ const MainPage: React.FC = () => {
         ? [...prevSelected, storeId]
         : prevSelected.filter((id) => id !== storeId)
     );
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -85,9 +100,9 @@ const MainPage: React.FC = () => {
 
       {isLoading && <p>Loading...</p>}
       {error && <p>Error fetching products</p>}
-      {productsData?.length === 0 && <p>No products found.</p>}
+      {productsData.length === 0 && <p>No products found.</p>}
       <Flexbox justifyContent="center" flexWrap="wrap">
-        {productsData?.map((product, index) => (
+        {productsData.map((product, index) => (
           <Card
             key={index}
             title={product.title}
@@ -98,7 +113,13 @@ const MainPage: React.FC = () => {
         ))}
       </Flexbox>
 
-      <PaginationComponent />
+      <Flexbox justifyContent="center" sx={{ marginTop: "16px" }}>
+        <PaginationComponent
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      </Flexbox>
     </Flexbox>
   );
 };
