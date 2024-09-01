@@ -34,11 +34,11 @@ public class ProductServiceImpl implements ProductService {
                         .map(String::trim)
                         .map(Integer::parseInt)
                         .collect(Collectors.toList())
-                : List.of(); // Empty list if no stores are selected
+                : List.of();
 
         Page<Product> pageResult = productRepository.findAllWithFilters(
                 searchTerm,
-                storeIdList.isEmpty() ? null : storeIdList, // Pass null if no stores are selected
+                storeIdList.isEmpty() ? null : storeIdList,
                 pageRequest
         );
 
