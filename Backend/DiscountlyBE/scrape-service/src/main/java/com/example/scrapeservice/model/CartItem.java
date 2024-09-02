@@ -1,10 +1,7 @@
 package com.example.scrapeservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "cart_items")
@@ -20,7 +17,12 @@ public class CartItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
+    @ToString.Exclude
     private Cart cart;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false, insertable = false, updatable = false)
+    private Product product;
 
     @Column(name = "product_id", nullable = false)
     private Integer productId;

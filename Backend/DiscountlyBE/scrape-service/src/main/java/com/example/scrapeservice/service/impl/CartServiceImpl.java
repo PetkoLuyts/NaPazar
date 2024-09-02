@@ -1,8 +1,10 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.dto.CartItemResponse;
 import com.example.scrapeservice.exceptions.CartException;
 import com.example.scrapeservice.exceptions.ProductException;
 import com.example.scrapeservice.exceptions.UserException;
+import com.example.scrapeservice.mapper.CartItemDTOMapper;
 import com.example.scrapeservice.model.AppUser;
 import com.example.scrapeservice.model.Cart;
 import com.example.scrapeservice.model.CartItem;
@@ -17,6 +19,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +29,7 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
+    private final CartItemDTOMapper cartItemDTOMapper;
 
     @Override
     public void addItemToCart(Integer productId) {
@@ -58,14 +63,18 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public Cart getCart() {
+    public List<CartItemResponse> getCart() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UserException("User not found"));
 
-        return cartRepository.findByUser(user)
+        Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new CartException("Cart not found"));
+
+        return cart.getItems().stream()
+                .map(cartItemDTOMapper)
+                .collect(Collectors.toList());
     }
 }
