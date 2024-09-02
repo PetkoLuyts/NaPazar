@@ -3,6 +3,7 @@ package com.example.scrapeservice.service.impl;
 import com.example.scrapeservice.dto.PaymentInfoDTO;
 import com.example.scrapeservice.repository.PaymentRepository;
 import com.example.scrapeservice.service.PaymentService;
+import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,16 @@ public class PaymentServiceImpl implements PaymentService {
     private String stripeKey;
 
     public PaymentIntent createPaymentIntent(PaymentInfoDTO paymentInfoDTO) throws StripeException {
+        Stripe.apiKey = stripeKey;
+
         List<String> paymentMethodTypes = new ArrayList<>();
         paymentMethodTypes.add("card");
 
         Map<String, Object> params = new HashMap<>();
-        params.put("amount", paymentInfoDTO.amount());
+
+        int amountInBGN = (int) Math.round(paymentInfoDTO.amount() * 100);
+
+        params.put("amount", amountInBGN);
         params.put("currency", paymentInfoDTO.currency());
         params.put("payment_method_types", paymentMethodTypes);
 
