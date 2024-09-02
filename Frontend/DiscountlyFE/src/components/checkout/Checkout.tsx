@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiCalls } from "../../shared/apiCalls";
 import { CartItem } from "../../components/cart/types";
 import {
@@ -48,6 +49,7 @@ const Checkout: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -84,6 +86,15 @@ const Checkout: React.FC = () => {
       </CheckoutContainer>
     );
   }
+
+  const totalAmount = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const handleProceedToPayment = () => {
+    navigate("/payment", { state: { totalAmount } });
+  };
 
   return (
     <CheckoutContainer>
@@ -126,7 +137,7 @@ const Checkout: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1">
-                      {(item.price * item.quantity).toFixed(2)}лв
+                      ${totalAmount.toFixed(2)}лв
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -144,7 +155,11 @@ const Checkout: React.FC = () => {
               .toFixed(2)}
             лв
           </BackgroundTypography>
-          <Button variant="contained" color="primary">
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleProceedToPayment}
+          >
             Продължи към плащане
           </Button>
         </Grid>

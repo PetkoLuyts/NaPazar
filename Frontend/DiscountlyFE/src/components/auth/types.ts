@@ -11,4 +11,5 @@ export interface AuthenticationRequest {
 export interface AuthenticationResponse {
   access_token: string;
   refresh_token: string;
+  username: string;
 }

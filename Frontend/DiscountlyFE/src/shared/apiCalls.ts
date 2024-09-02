@@ -11,6 +11,7 @@ import {
   AuthenticationResponse,
   AuthenticationRequest,
 } from "../components/auth/types";
+import { PaymentIntentRequest } from "../components/payment/types";
 
 // PRODUCTS
 const getProducts = async (
@@ -37,9 +38,11 @@ const register = async (request: RegisterRequest) => {
   });
   const token = response.data.access_token;
   const refreshToken = response.data.refresh_token;
+  const username = response.data.username;
 
   localStorage.setItem("token", token);
   localStorage.setItem("refreshToken", refreshToken);
+  localStorage.setItem("username", username);
 
   return response.data;
 };
@@ -52,9 +55,11 @@ const authenticate = async (request: AuthenticationRequest) => {
   });
   const token = response.data.access_token;
   const refreshToken = response.data.refresh_token;
+  const username = response.data.username;
 
   localStorage.setItem("token", token);
   localStorage.setItem("refreshToken", refreshToken);
+  localStorage.setItem("username", username);
 
   return response.data;
 };
@@ -72,7 +77,6 @@ const addItemToCart = async (productId: number) => {
   });
 };
 
-// CART
 const getCartItems = async () => {
   const token = localStorage.getItem("token");
 
@@ -84,7 +88,21 @@ const getCartItems = async () => {
     },
   });
 
-  console.log(response.data);
+  return response.data;
+};
+
+// PAYMENT
+const getPaymentIntent = async (request: PaymentIntentRequest) => {
+  const token = localStorage.getItem("token");
+
+  const response = await call<string>({
+    url: `/payment/payment-intent`,
+    method: "POST",
+    data: request,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   return response.data;
 };
@@ -95,4 +113,5 @@ export const apiCalls = {
   authenticate,
   addItemToCart,
   getCartItems,
+  getPaymentIntent,
 };
