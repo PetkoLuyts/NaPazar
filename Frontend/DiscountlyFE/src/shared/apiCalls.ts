@@ -34,6 +34,12 @@ const register = async (request: RegisterRequest) => {
     method: "POST",
     data: request,
   });
+  const token = response.data.access_token;
+  const refreshToken = response.data.refresh_token;
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("refreshToken", refreshToken);
+
   return response.data;
 };
 
@@ -43,11 +49,31 @@ const authenticate = async (request: AuthenticationRequest) => {
     method: "POST",
     data: request,
   });
+  const token = response.data.access_token;
+  const refreshToken = response.data.refresh_token;
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("refreshToken", refreshToken);
+
   return response.data;
+};
+
+// CART
+const addItemToCart = async (productId: number) => {
+  const token = localStorage.getItem("token");
+
+  await call<void>({
+    url: `/cart/add-item/${productId}`,
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
 
 export const apiCalls = {
   getProducts,
   register,
   authenticate,
+  addItemToCart,
 };

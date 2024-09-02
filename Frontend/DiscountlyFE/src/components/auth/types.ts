@@ -9,6 +9,6 @@ export interface AuthenticationRequest {
 }
 
 export interface AuthenticationResponse {
-  token: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
 }

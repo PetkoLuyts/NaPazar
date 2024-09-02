@@ -14,7 +14,7 @@ interface FlexboxProps {
   alignItems?: "flex-start" | "center" | "flex-end" | "stretch" | "baseline";
   flexWrap?: "nowrap" | "wrap" | "wrap-reverse";
   gap?: number | string;
-  sx?: SxProps<Theme>; // MUI's system style prop for custom styling
+  sx?: SxProps<Theme>;
 }
 
 export const Flexbox: React.FC<FlexboxProps> = ({

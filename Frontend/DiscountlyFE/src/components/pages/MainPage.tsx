@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 // UTILS
 import { useProducts } from "../../shared/queries";
+import { apiCalls } from "../../shared/apiCalls";
 
 // COMPONENTS
 import Card from "../card/Card";
@@ -64,6 +65,15 @@ const MainPage: React.FC = () => {
     setCurrentPage(page);
   };
 
+  const handleAddToCart = async (productId: number) => {
+    try {
+      await apiCalls.addItemToCart(productId);
+      alert("Продуктът беше добавен в количката.");
+    } catch (error) {
+      alert("Възникна грешка при добавяне на продукта в количката.");
+    }
+  };
+
   return (
     <Flexbox direction="column" sx={{ padding: "16px", height: "100vh" }}>
       <Flexbox
@@ -109,6 +119,7 @@ const MainPage: React.FC = () => {
             oldPrice={product.oldPrice}
             newPrice={product.newPrice}
             discountPhrase={product.discountPhrase}
+            onAddToCart={() => handleAddToCart(product.id)}
           />
         ))}
       </Flexbox>
