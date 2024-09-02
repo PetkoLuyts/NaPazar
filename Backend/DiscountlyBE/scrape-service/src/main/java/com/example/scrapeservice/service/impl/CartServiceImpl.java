@@ -1,5 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.exceptions.CartException;
 import com.example.scrapeservice.exceptions.ProductException;
 import com.example.scrapeservice.exceptions.UserException;
 import com.example.scrapeservice.model.AppUser;
@@ -54,5 +55,17 @@ public class CartServiceImpl implements CartService {
         cart.getItems().add(cartItem);
 
         cartRepository.save(cart);
+    }
+
+    @Override
+    public Cart getCart() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        AppUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UserException("User not found"));
+
+        return cartRepository.findByUser(user)
+                .orElseThrow(() -> new CartException("Cart not found"));
     }
 }
