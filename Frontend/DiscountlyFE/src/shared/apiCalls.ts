@@ -1,6 +1,7 @@
 // UTILS
 import { call } from "./axiosConfig";
 import { createQueryString } from "./apiCallsUtils";
+import { CartItem } from "../components/cart/types";
 
 // TYPES
 import { ProductResponse } from "../products/types";
@@ -71,9 +72,27 @@ const addItemToCart = async (productId: number) => {
   });
 };
 
+// CART
+const getCartItems = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await call<CartItem[]>({
+    url: `/cart/items`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  console.log(response.data);
+
+  return response.data;
+};
+
 export const apiCalls = {
   getProducts,
   register,
   authenticate,
   addItemToCart,
+  getCartItems,
 };
