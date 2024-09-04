@@ -137,7 +137,7 @@ const Checkout: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1">
-                      ${totalAmount.toFixed(2)}лв
+                      {totalAmount.toFixed(2)}лв
                     </Typography>
                   </TableCell>
                 </TableRow>

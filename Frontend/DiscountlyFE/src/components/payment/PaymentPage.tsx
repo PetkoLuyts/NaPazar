@@ -124,12 +124,12 @@ const PaymentPage: React.FC = () => {
 
   return (
     <PaymentPageContainer>
-      <HeaderTypography variant="h4">Payment Details</HeaderTypography>
+      <HeaderTypography variant="h4">Детайли на плащане</HeaderTypography>
       <FormBox>
         <form onSubmit={handleSubmit}>
           <InputField
             fullWidth
-            label="Name on Card"
+            label="Име на картата"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -163,7 +163,7 @@ const PaymentPage: React.FC = () => {
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Pay Now"
+                "Плати"
               )}
             </SubmitButton>
             {error && (

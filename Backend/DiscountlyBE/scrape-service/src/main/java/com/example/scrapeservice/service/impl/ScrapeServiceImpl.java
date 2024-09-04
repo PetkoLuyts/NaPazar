@@ -288,7 +288,6 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     public void getLidlCategoryProductsUrl(String categoryUrl) {
-        List<String> categoryProductsUrls = new ArrayList<>();
         Store lidlStore = storeService.getStoreById(LIDL_ID);
 
         try {
@@ -340,8 +339,6 @@ public class ScrapeServiceImpl implements ScrapeService {
                                     .build();
 
                             productService.createProduct(product);
-
-                            System.out.println("Created Product: " + product.getTitle());
                         }
                     }
                 }
