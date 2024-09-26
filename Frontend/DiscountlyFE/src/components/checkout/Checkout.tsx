@@ -16,8 +16,11 @@ import {
   Button,
   Grid,
   Divider,
+  IconButton,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 
 const CheckoutContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -65,6 +68,16 @@ const Checkout: React.FC = () => {
 
     fetchCartItems();
   }, []);
+
+  const handleDelete = (itemId: string) => {
+    // Implement the logic to delete a cart item
+    console.log("Delete item", itemId);
+  };
+
+  const handleEdit = (itemId: string) => {
+    // Implement the logic to edit a cart item's quantity
+    console.log("Edit item", itemId);
+  };
 
   if (loading) {
     return (
@@ -119,6 +132,7 @@ const Checkout: React.FC = () => {
                 <TableHeaderCell>Бр.</TableHeaderCell>
                 <TableHeaderCell>Цена</TableHeaderCell>
                 <TableHeaderCell>Общо</TableHeaderCell>
+                <TableHeaderCell>Действия</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -132,13 +146,29 @@ const Checkout: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1">
-                      {item.price.toFixed(2)}лв
+                      {item.price.toFixed(2)} лв
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1">
-                      {totalAmount.toFixed(2)}лв
+                      {(item.price * item.quantity).toFixed(2)} лв
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      aria-label="edit"
+                      color="primary"
+                      onClick={() => handleEdit(item.id)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      aria-label="delete"
+                      color="secondary"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -149,11 +179,7 @@ const Checkout: React.FC = () => {
       <TotalBox>
         <Grid container justifyContent="space-between" alignItems="center">
           <BackgroundTypography variant="h5" color="primary">
-            Общо:
-            {cartItems
-              .reduce((total, item) => total + item.price * item.quantity, 0)
-              .toFixed(2)}
-            лв
+            Общо: {totalAmount.toFixed(2)} лв
           </BackgroundTypography>
           <Button
             variant="contained"
