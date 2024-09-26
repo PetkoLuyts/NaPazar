@@ -77,6 +77,30 @@ const addItemToCart = async (productId: number) => {
   });
 };
 
+const removeItemFromCart = async (productId: number) => {
+  const token = localStorage.getItem("token");
+
+  await call<void>({
+    url: `/cart/remove-item/${productId}`,
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+const updateItemQuantity = async (productId: number, quantity: number) => {
+  const token = localStorage.getItem("token");
+
+  await call<void>({
+    url: `/cart/update-item/${productId}?quantity=${quantity}`,
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
 const getCartItems = async () => {
   const token = localStorage.getItem("token");
 
@@ -114,4 +138,6 @@ export const apiCalls = {
   addItemToCart,
   getCartItems,
   getPaymentIntent,
+  removeItemFromCart,
+  updateItemQuantity,
 };

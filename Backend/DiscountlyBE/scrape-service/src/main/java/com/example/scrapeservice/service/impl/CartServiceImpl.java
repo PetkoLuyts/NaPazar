@@ -77,4 +77,48 @@ public class CartServiceImpl implements CartService {
                 .map(cartItemDTOMapper)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public void updateItemQuantity(Integer productId, Integer quantity) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        AppUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UserException("User not found"));
+
+        Cart cart = cartRepository.findByUser(user)
+                .orElseThrow(() -> new CartException("Cart not found"));
+
+        CartItem cartItem = cart.getItems().stream()
+                .filter(item -> item.getId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new CartException("Product not found in cart"));
+
+        if (quantity <= 0) {
+            throw new CartException("Quantity must be greater than 0");
+        }
+
+        cartItem.setQuantity(quantity);
+        cartRepository.save(cart);
+    }
+
+    @Override
+    public void removeItemFromCart(Integer productId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        AppUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UserException("User not found"));
+
+        Cart cart = cartRepository.findByUser(user)
+                .orElseThrow(() -> new CartException("Cart not found"));
+
+        CartItem cartItem = cart.getItems().stream()
+                .filter(item -> item.getId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new CartException("Product not found in cart"));
+
+        cart.getItems().remove(cartItem);
+        cartRepository.save(cart);
+    }
 }

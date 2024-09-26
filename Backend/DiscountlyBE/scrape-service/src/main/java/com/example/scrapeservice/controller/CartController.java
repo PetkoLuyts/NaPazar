@@ -26,4 +26,17 @@ public class CartController {
     public List<CartItemResponse> getCartItems() {
         return cartService.getCart();
     }
+
+    @PutMapping("/update-item/{id}")
+    public ResponseEntity<Void> updateItemQuantity(@PathVariable("id") Integer productId,
+                                                   @RequestParam("quantity") Integer quantity) {
+        cartService.updateItemQuantity(productId, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/remove-item/{id}")
+    public ResponseEntity<Void> removeItemFromCart(@PathVariable("id") Integer productId) {
+        cartService.removeItemFromCart(productId);
+        return ResponseEntity.ok().build();
+    }
 }
