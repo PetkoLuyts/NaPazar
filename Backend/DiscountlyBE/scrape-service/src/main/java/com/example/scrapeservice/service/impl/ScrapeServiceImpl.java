@@ -27,7 +27,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -71,36 +70,22 @@ public class ScrapeServiceImpl implements ScrapeService {
                 try {
                     Document productPage = Jsoup.connect(productUrl).get();
 
-//                    String productImageUrlWrapper = getKauflandProductImageUrl(productPage, Arrays.asList("a-image-responsive", "a-image-responsive--preview-knockout"));
-//                    String productImageUrl;
-//                    int resizeIndex = productImageUrlWrapper.indexOf("?MYRAVRESIZE");
-//                    if (resizeIndex != -1) {
-//                        productImageUrl = productImageUrlWrapper.substring(0, resizeIndex);
-//                    } else {
-//                        productImageUrl = productImageUrlWrapper;
-//                    }
-
                     String promotionText = getKauflandPromotionText(productPage, Arrays.asList("a-eye-catcher", "a-eye-catcher--secondary"));
                     Date promotionStarts = null;
                     Date promotionExpires = null;
                     if (promotionText != null) {
                         String[] parts = promotionText.split("\\s+");
-                        String startDateStr = parts[0]; // First date in the range
-                        String endDateStr = parts[parts.length - 1]; // Last date in the range
+                        String startDateStr = parts[0];
+                        String endDateStr = parts[parts.length - 1];
 
                         promotionStarts = convertToDate(parsePartialDate(startDateStr));
                         promotionExpires = convertToDate(parsePartialDate(endDateStr));
                     }
 
-                    String productSubtitle = getKauflandProductSubtitle(productPage, ".t-offer-detail__subtitle");
                     String productTitle = getProductTitle(productPage, ".t-offer-detail__title");
                     String productDiscountPhrase = getKauflandProductDiscountPhrase(productPage, ".a-pricetag__discount", ".a-pricetag__old-price");
                     Double productOldPrice = getKauflandProductOldPrice(productPage, ".a-pricetag__old-price");
                     Double productNewPrice = getProductNewPrice(productPage, ".a-pricetag__price");
-                    String productBasePrice = getKauflandProductBasePrice(productPage, ".t-offer-detail__basic-price");
-                    String productQuantity = getProductQuantity(productPage, ".t-offer-detail__quantity");
-                    String productDescription = getKauflandProductDescription(productPage, ".t-offer-detail__description");
-                    String promotionMessage = getKauflandProductPromotionMessage(productPage, ".t-offer-detail__mpa", ".t-offer-detail__promo-message");
 
                     if (productTitle != null && !productDiscountPhrase.equals("само") && !productDiscountPhrase.equals("тази седмица"))
                     {
@@ -273,11 +258,9 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     private LocalDate parsePartialDate(String dateStr) {
-        // Append the current year to the date string
         int currentYear = LocalDate.now().getYear();
-        String fullDateStr = dateStr + currentYear; // Add the year in the format dd.MM.yyyy
+        String fullDateStr = dateStr + currentYear;
 
-        // Define a formatter to parse the day, month, and year
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
         return LocalDate.parse(fullDateStr, formatter);
@@ -305,7 +288,6 @@ public class ScrapeServiceImpl implements ScrapeService {
 
                         JSONObject keyFactsObject = productData.optJSONObject("keyfacts");
                         String productTitle = (keyFactsObject != null) ? keyFactsObject.optString("fullTitle", "N/A") : "N/A";
-                        String productDescription = (keyFactsObject != null) ? keyFactsObject.optString("description", "N/A") : "N/A";
 
                         JSONObject priceObject = productData.optJSONObject("price");
                         double productOldPrice = (priceObject != null) ? priceObject.optDouble("oldPrice", 0.0) : 0.0;
@@ -313,9 +295,6 @@ public class ScrapeServiceImpl implements ScrapeService {
 
                         JSONObject discountObject = (priceObject != null) ? priceObject.optJSONObject("discount") : null;
                         String productDiscountPhrase = (discountObject != null) ? discountObject.optString("discountText", "N/A") : "N/A";
-
-                        JSONObject basePriceObject = (priceObject != null) ? priceObject.optJSONObject("basePrice") : null;
-                        String productQuantity = (basePriceObject != null) ? basePriceObject.optString("text", "N/A") : "N/A";
 
                         String promotionDateRange = extractPromotionDateRange(productData);
                         PromotionInterval promotionInterval = getLidlProductPromotionInterval(promotionDateRange);
@@ -426,7 +405,6 @@ public class ScrapeServiceImpl implements ScrapeService {
             return null;
         }
     }
-
 
     private String extractPromotionDateRange(JSONObject productData) {
         JSONObject stockAvailability = productData.optJSONObject("stockAvailability");
@@ -565,19 +543,6 @@ public class ScrapeServiceImpl implements ScrapeService {
         return null;
     }
 
-    public String getKauflandProductImageUrl(Document document, List<String> classNames) {
-        try {
-            Elements imgElements = document.select("img." + String.join(".", classNames));
-            if (!imgElements.isEmpty()) {
-                return imgElements.first().attr("src");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
     public String getKauflandPromotionText(Document document, List<String> classNames) {
         try {
             Elements divElements = document.select("div." + String.join(".", classNames));
@@ -591,18 +556,6 @@ public class ScrapeServiceImpl implements ScrapeService {
             e.printStackTrace();
         }
 
-        return null;
-    }
-
-    public String getKauflandProductSubtitle(Document soup, String className) {
-        try {
-            Element subtitleElement = soup.selectFirst(className);
-            if (subtitleElement != null) {
-                return subtitleElement.text().trim();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         return null;
     }
 
@@ -653,13 +606,8 @@ public class ScrapeServiceImpl implements ScrapeService {
             Element oldPriceElement = soup.selectFirst(className);
 
             if (oldPriceElement != null) {
-                // Extract the text from the element
                 String oldPriceText = oldPriceElement.text().trim();
 
-                // Print for debugging
-                System.out.println("Raw Price Text: " + oldPriceText);
-
-                // Convert text to double
                 return Double.parseDouble(oldPriceText.replace(",", "."));
             }
         } catch (NumberFormatException | NullPointerException e) {
@@ -668,81 +616,6 @@ public class ScrapeServiceImpl implements ScrapeService {
 
         return null;
     }
-
-
-    public String getKauflandProductBasePrice(Document soup, String className) {
-        try {
-            Element basePriceElement = soup.selectFirst(className);
-            if (basePriceElement != null) {
-                return basePriceElement.text().trim();
-            }
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    public String getProductQuantity(Document soup, String className) {
-        try {
-            Element quantityElement = soup.selectFirst(className);
-            if (quantityElement != null) {
-                // Extract and return the quantity text, trimming any extra spaces
-                return quantityElement.text().trim();
-            }
-        } catch (NullPointerException e) {
-            // Handle the case where the element is missing
-            e.printStackTrace();
-        }
-
-        // Return null if the quantity cannot be determined
-        return null;
-    }
-
-    public String getKauflandProductDescription(Document soup, String className) {
-        try {
-            Element descriptionElement = soup.selectFirst(className);
-            if (descriptionElement != null) {
-                Element paragraph = descriptionElement.selectFirst("p");
-                if (paragraph != null) {
-                    // Convert the element to a string and replace "<br/>" with a newline character
-                    String descriptionWrapper = paragraph.html().replace("<br>", "\n").replace("<br/>", "\n");
-
-                    // Split the description into lines, filter out lines with "p>" and trim them
-                    List<String> descriptionLines = Arrays.stream(descriptionWrapper.split("\n"))
-                            .filter(line -> !line.contains("p>"))
-                            .map(String::trim)
-                            .collect(Collectors.toList());
-
-                    // Join the lines back together with newline characters
-                    return String.join("\n", descriptionLines);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null; // Return null if the description cannot be determined
-    }
-
-    public String getKauflandProductPromotionMessage(Document soup, String className1, String className2) {
-        try {
-            Element promotionMessageElement = soup.selectFirst(className1);
-            if (promotionMessageElement != null) {
-                return promotionMessageElement.text().trim();
-            } else {
-                promotionMessageElement = soup.selectFirst(className2);
-                if (promotionMessageElement != null) {
-                    return promotionMessageElement.text().trim();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-
 
     @Data
     @AllArgsConstructor
