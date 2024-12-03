@@ -36,4 +36,14 @@ public class AuthenticationController {
     ) throws IOException {
         service.refreshToken(request, response);
     }
+
+    @PostMapping("/forgot-password")
+    public void forgotPassword(@RequestParam String email) {
+        service.forgotPassword(email);
+    }
+
+    @PostMapping("reset-password")
+    public void resetPassword(@RequestParam String email, @RequestHeader String password) {
+        service.resetPassword(email, password);
+    }
 }

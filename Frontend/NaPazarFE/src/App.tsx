@@ -7,6 +7,8 @@ import "./App.css";
 import AuthForm from "./components/auth/AuthForm";
 import Footer from "./components/footer/Footer";
 import PaymentPage from "./components/payment/PaymentPage";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,8 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/auth" element={<AuthForm />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
           <Footer />
         </div>

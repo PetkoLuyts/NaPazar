@@ -70,7 +70,15 @@ const AuthForm: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <a href="#">Забравена парола?</a>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/forgot-password");
+            }}
+          >
+            Забравена парола?
+          </a>
           <button type="submit">Влез</button>
         </form>
       </div>

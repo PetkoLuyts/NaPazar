@@ -13,4 +13,6 @@ public interface AuthenticationService {
     AuthenticationResponse authenticate(AuthenticationRequest request);
     void refreshToken(HttpServletRequest request,
                       HttpServletResponse response) throws IOException;
+    void forgotPassword(String email);
+    void resetPassword(String email, String password);
 }

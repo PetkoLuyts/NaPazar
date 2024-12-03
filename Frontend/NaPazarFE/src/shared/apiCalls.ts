@@ -131,6 +131,34 @@ const getPaymentIntent = async (request: PaymentIntentRequest) => {
   return response.data;
 };
 
+const forgotPassword = async (data: { email: string }) => {
+  const { email } = data;
+
+  await call<void>({
+    url: `/auth/forgot-password?email=${encodeURIComponent(email)}`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+};
+
+export const resetPassword = async (data: {
+  email: string;
+  password: string;
+}) => {
+  const response = await call<void>({
+    url: `/auth/reset-password?email=${data.email}`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      password: data.password,
+    },
+  });
+
+  return response.data;
+};
+
 export const apiCalls = {
   getProducts,
   register,
@@ -140,4 +168,6 @@ export const apiCalls = {
   getPaymentIntent,
   removeItemFromCart,
   updateItemQuantity,
+  forgotPassword,
+  resetPassword,
 };

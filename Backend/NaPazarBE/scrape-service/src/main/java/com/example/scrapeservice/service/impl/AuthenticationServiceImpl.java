@@ -3,6 +3,7 @@ package com.example.scrapeservice.service.impl;
 import com.example.scrapeservice.dto.AuthenticationRequest;
 import com.example.scrapeservice.dto.AuthenticationResponse;
 import com.example.scrapeservice.dto.RegisterRequest;
+import com.example.scrapeservice.exceptions.UserException;
 import com.example.scrapeservice.model.AppUser;
 import com.example.scrapeservice.model.Role;
 import com.example.scrapeservice.model.Token;
@@ -11,6 +12,7 @@ import com.example.scrapeservice.repository.TokenRepository;
 import com.example.scrapeservice.repository.UserRepository;
 import com.example.scrapeservice.security.JwtService;
 import com.example.scrapeservice.service.AuthenticationService;
+import com.example.scrapeservice.service.EmailSenderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailSenderService emailSenderService;
 
     public AuthenticationResponse register(RegisterRequest request) {
         var user = AppUser.builder()
@@ -131,5 +135,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
             }
         }
+    }
+
+    @Override
+    public void forgotPassword(String email) {
+        String resetLink = "http://localhost:5173/reset-password";
+
+        String subject = "Password Reset Request";
+        String body = "<p>To reset your password, click the link below:</p>"
+                + "<a href=\"" + resetLink + "\">Reset Password</a>"
+                + "<p>If you did not request this, please ignore this email.</p>";
+
+        emailSenderService.sendEmail(email, subject, body);
+    }
+
+    @Override
+    public void resetPassword(String email, String password) {
+        AppUser user = repository.findByEmail(email)
+                .orElseThrow(() -> new UserException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(password));
+
+        repository.save(user);
     }
 }
