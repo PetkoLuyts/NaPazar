@@ -219,3 +219,18 @@ body {
 .container.active .toggle-right {
   transform: translateX(200%);
 }
+
+.google-login-button {
+  background-color: #db4437;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.google-login-button:hover {
+  background-color: #c33d2b;
+}

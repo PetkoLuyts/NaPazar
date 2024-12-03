@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { apiCalls } from "../../shared/apiCalls";
 import "./AuthForm.css";
 import { useNavigate } from "react-router-dom";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 const AuthForm: React.FC = () => {
   const [isSignUpActive, setIsSignUpActive] = useState(false);
@@ -50,6 +51,7 @@ const AuthForm: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
           <button type="submit">Регистрирай се</button>
+          <GoogleLoginButton />
         </form>
       </div>
       <div className="form-container sign-in">
@@ -83,6 +85,7 @@ const AuthForm: React.FC = () => {
             <button className="hidden" id="login" onClick={toggleForm}>
               Влез
             </button>
+            <GoogleLoginButton />
           </div>
           <div className="toggle-panel toggle-right">
             <h1>За първи път тук?</h1>

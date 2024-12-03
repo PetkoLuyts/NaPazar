@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
     private final ProductService productService;
 
-    @GetMapping ("/all")
+    @GetMapping("/all")
     public PaginatedProductResponse getAllProducts(@RequestParam(required = false) String searchTerm,
                                                    @RequestParam(required = false) String storeIds,
                                                    @RequestParam(defaultValue = "0") int page,
