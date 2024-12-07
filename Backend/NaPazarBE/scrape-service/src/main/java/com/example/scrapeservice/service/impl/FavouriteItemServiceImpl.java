@@ -1,5 +1,7 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.dto.PaginatedProductResponse;
+import com.example.scrapeservice.dto.ProductDTO;
 import com.example.scrapeservice.exceptions.ProductException;
 import com.example.scrapeservice.model.AppUser;
 import com.example.scrapeservice.model.FavouriteItem;
@@ -9,9 +11,14 @@ import com.example.scrapeservice.repository.ProductRepository;
 import com.example.scrapeservice.repository.UserRepository;
 import com.example.scrapeservice.service.FavouriteItemService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -40,6 +47,39 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
 
         favouriteItemRepository.save(favouriteItem);
     }
+
+    @Override
+    public PaginatedProductResponse getAllFavouriteItems(PageRequest pageRequest) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        AppUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        Page<FavouriteItem> pageResult = favouriteItemRepository.findAllByUser(user.getId(), pageRequest);
+
+        List<ProductDTO> products = pageResult.getContent().stream()
+                .map(favouriteItem -> {
+                    Product product = favouriteItem.getProduct();
+                    return ProductDTO.builder()
+                            .id(product.getId())
+                            .title(product.getTitle())
+                            .oldPrice(product.getOldPrice())
+                            .newPrice(product.getNewPrice())
+                            .discountPhrase(product.getDiscountPhrase())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return new PaginatedProductResponse(
+                products,
+                pageResult.getTotalPages(),
+                pageResult.getTotalElements()
+        );
+    }
+
+
 
     @Override
     public void removeFavouriteItem(int id) {
