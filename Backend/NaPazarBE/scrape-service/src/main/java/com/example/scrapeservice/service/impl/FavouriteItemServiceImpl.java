@@ -40,4 +40,20 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
 
         favouriteItemRepository.save(favouriteItem);
     }
+
+    @Override
+    public void removeFavouriteItem(int id) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        AppUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        FavouriteItem favouriteItem = favouriteItemRepository.findByUserAndProductId(user.getId(), id)
+                .orElseThrow(() -> new IllegalStateException("Favorite item not found"));
+
+        favouriteItemRepository.delete(favouriteItem);
+    }
+
 }
