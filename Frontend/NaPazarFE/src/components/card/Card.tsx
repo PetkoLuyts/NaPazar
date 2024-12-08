@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { apiCalls } from "../../shared/apiCalls";
 import "./Card.css";
 
 interface CardProps {
+  id: number;
   title: string;
   oldPrice: number;
   newPrice: number;
@@ -10,6 +12,7 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({
+  id,
   title,
   oldPrice,
   newPrice,
@@ -18,8 +21,17 @@ const Card: React.FC<CardProps> = ({
 }) => {
   const [isFavorited, setIsFavorited] = useState(false);
 
-  const handleFavoriteClick = () => {
-    setIsFavorited(!isFavorited);
+  const handleFavoriteClick = async () => {
+    try {
+      if (isFavorited) {
+        await apiCalls.removeFavoriteItem(id);
+      } else {
+        await apiCalls.addFavoriteItem(id);
+      }
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error("Error updating favorite status:", error);
+    }
   };
 
   return (

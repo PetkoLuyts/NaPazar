@@ -114,7 +114,7 @@ const MainPage: React.FC = () => {
       <Flexbox justifyContent="center" flexWrap="wrap">
         {productsData.map((product, index) => (
           <Card
-            key={index}
+            id={product.id}
             title={product.title}
             oldPrice={product.oldPrice}
             newPrice={product.newPrice}

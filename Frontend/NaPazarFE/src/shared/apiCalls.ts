@@ -159,6 +159,49 @@ export const resetPassword = async (data: {
   return response.data;
 };
 
+// FAVOURITE ITEM
+const addFavoriteItem = async (productId: number) => {
+  const token = localStorage.getItem("token");
+
+  await call<void>({
+    url: `/favourite/add/${productId}`,
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+const removeFavoriteItem = async (productId: number) => {
+  const token = localStorage.getItem("token");
+
+  await call<void>({
+    url: `/favourite/remove-item/${productId}`,
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+const getAllFavoriteItems = async (page: number = 0, size: number = 8) => {
+  const token = localStorage.getItem("token");
+
+  const response = await call<{
+    products: ProductResponse[];
+    totalPages: number;
+    totalElements: number;
+  }>({
+    url: `/favourite/all?page=${page}&size=${size}`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
+
 export const apiCalls = {
   getProducts,
   register,
@@ -170,4 +213,7 @@ export const apiCalls = {
   updateItemQuantity,
   forgotPassword,
   resetPassword,
+  addFavoriteItem,
+  removeFavoriteItem,
+  getAllFavoriteItems,
 };
