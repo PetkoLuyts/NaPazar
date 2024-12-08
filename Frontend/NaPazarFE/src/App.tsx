@@ -9,6 +9,7 @@ import Footer from "./components/footer/Footer";
 import PaymentPage from "./components/payment/PaymentPage";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
+import FavoritesPage from "./components/favourites/FavouritesPage";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ function App() {
           <Routes>
             <Route path="/" element={<MainPage />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/favourites" element={<FavoritesPage />} />
             <Route path="/auth" element={<AuthForm />} />
             <Route path="/payment" element={<PaymentPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

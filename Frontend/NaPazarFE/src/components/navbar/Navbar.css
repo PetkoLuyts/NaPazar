@@ -15,7 +15,8 @@
 }
 
 .navbar-logo a,
-.navbar-cart a {
+.navbar-cart a,
+.navbar-favourites a {
   color: white;
   text-decoration: none;
   font-size: 1.2rem;
@@ -26,12 +27,15 @@
   flex-grow: 1;
 }
 
-.navbar-cart {
-  flex-shrink: 0;
-  text-align: right;
+.navbar-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-top: 8px;
 }
 
 .navbar-logo a:hover,
-.navbar-cart a:hover {
+.navbar-cart a:hover,
+.navbar-favourites a:hover {
   text-decoration: underline;
 }
