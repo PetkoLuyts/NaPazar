@@ -4,7 +4,6 @@ import com.example.scrapeservice.model.AppUser;
 import com.example.scrapeservice.model.Role;
 import com.example.scrapeservice.repository.UserRepository;
 import com.example.scrapeservice.security.JwtAuthenticationFilter;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
