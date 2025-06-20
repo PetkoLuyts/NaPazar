@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,6 +35,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailSenderService emailSenderService;
+
+    @Value("${reset.link}")
+    private String resetLink;
 
     public AuthenticationResponse register(RegisterRequest request) {
         var user = AppUser.builder()
@@ -138,8 +142,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void forgotPassword(String email) {
-        String resetLink = "http://localhost:5173/reset-password";
-
         String subject = "Password Reset Request";
         String body = "<p>To reset your password, click the link below:</p>"
                 + "<a href=\"" + resetLink + "\">Reset Password</a>"
