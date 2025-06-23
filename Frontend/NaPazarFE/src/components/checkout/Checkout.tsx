@@ -94,6 +94,38 @@ const Checkout: React.FC = () => {
     }
   };
 
+  const totalAmount = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const handleProceedToPayment = () => {
+    navigate("/payment", { state: { totalAmount } });
+  };
+
+  const handleDownloadList = () => {
+    const listHeader = "Списък за пазаруване\n\n";
+    const itemLines = cartItems.map(
+      (item, index) =>
+        `${index + 1}. ${item.productTitle} – ${
+          item.quantity
+        } бр. x ${item.price.toFixed(2)} лв = ${(
+          item.quantity * item.price
+        ).toFixed(2)} лв`
+    );
+    const totalLine = `\nОбща сума: ${totalAmount.toFixed(2)} лв`;
+
+    const shoppingList = listHeader + itemLines.join("\n") + totalLine;
+
+    const blob = new Blob([shoppingList], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "shopping-list.txt";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <CheckoutContainer textAlign="center">
@@ -114,15 +146,6 @@ const Checkout: React.FC = () => {
       </CheckoutContainer>
     );
   }
-
-  const totalAmount = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-
-  const handleProceedToPayment = () => {
-    navigate("/payment", { state: { totalAmount } });
-  };
 
   return (
     <CheckoutContainer>
@@ -200,17 +223,35 @@ const Checkout: React.FC = () => {
         </TableContainer>
       )}
       <TotalBox>
-        <Grid container justifyContent="space-between" alignItems="center">
-          <BackgroundTypography variant="h5" color="primary">
-            Общо: {totalAmount.toFixed(2)} лв
-          </BackgroundTypography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleProceedToPayment}
-          >
-            Продължи към плащане
-          </Button>
+        <Grid
+          container
+          spacing={2}
+          justifyContent="flex-end"
+          alignItems="center"
+        >
+          <Grid item>
+            <BackgroundTypography variant="h5" color="primary">
+              Общо: {totalAmount.toFixed(2)} лв
+            </BackgroundTypography>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleProceedToPayment}
+            >
+              Продължи към плащане
+            </Button>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleDownloadList}
+            >
+              Изтегли списък
+            </Button>
+          </Grid>
         </Grid>
       </TotalBox>
     </CheckoutContainer>
