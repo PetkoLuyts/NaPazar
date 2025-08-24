@@ -1,5 +1,7 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.constants.Constants;
+import com.example.scrapeservice.dto.PromotionInterval;
 import com.example.scrapeservice.model.Product;
 import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
@@ -7,9 +9,11 @@ import com.example.scrapeservice.service.ProductService;
 import com.example.scrapeservice.service.PromotionService;
 import com.example.scrapeservice.service.ScrapeService;
 import com.example.scrapeservice.service.StoreService;
+import com.example.scrapeservice.utils.DateUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
@@ -20,7 +24,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -28,10 +31,13 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class ScrapeServiceImpl implements ScrapeService {
@@ -41,9 +47,6 @@ public class ScrapeServiceImpl implements ScrapeService {
     private String lidlUrl;
     @Value("${kaufland.url}")
     private String kauflandUrl;
-    private static final int BILLA_ID = 1;
-    private static final int LIDL_ID = 2;
-    private static final int KAUFLAND_ID = 3;
     private final StoreService storeService;
     private final ProductService productService;
     private final PromotionService promotionService;
@@ -65,7 +68,7 @@ public class ScrapeServiceImpl implements ScrapeService {
     @Override
     public void scrapeKauflandData() {
         List<String> categoryUrls = getKauflandCategoriesUrls();
-        Store kauflandStore = storeService.getStoreById(KAUFLAND_ID);
+        Store kauflandStore = storeService.getStoreById(Constants.KAUFLAND_ID);
 
         for (String categoryUrl : categoryUrls) {
             List<String> productUrls = getKauflandCategoryProductsUrl(categoryUrl);
@@ -82,8 +85,8 @@ public class ScrapeServiceImpl implements ScrapeService {
                         String startDateStr = parts[0];
                         String endDateStr = parts[parts.length - 1];
 
-                        promotionStarts = convertToDate(parsePartialDate(startDateStr));
-                        promotionExpires = convertToDate(parsePartialDate(endDateStr));
+                        promotionStarts = convertToDate(DateUtils.parsePartialDate(startDateStr));
+                        promotionExpires = convertToDate(DateUtils.parsePartialDate(endDateStr));
                     }
 
                     String productTitle = getProductTitle(productPage, ".t-offer-detail__title");
@@ -127,7 +130,7 @@ public class ScrapeServiceImpl implements ScrapeService {
             Date billaPromotionStart = getBillaPromotionStart(document);
             Date billaPromotionEnd = getBillaPromotionEnd(document);
 
-            Store billaStore = storeService.getStoreById(BILLA_ID);
+            Store billaStore = storeService.getStoreById(Constants.BILLA_ID);
 
             Promotion billaPromotion = Promotion.builder()
                     .startDate(billaPromotionStart)
@@ -141,9 +144,9 @@ public class ScrapeServiceImpl implements ScrapeService {
 
             for (int i = 5; i < products.size() - 10; i++) {
                 String productTitle = getProductTitle(products.get(i), ".actualProduct");
-                Double productOldPrice = getBillaProductOldPrice(products.get(i), ".price");
-                Double productNewPrice = getBillaProductNewPrice(products.get(i), ".price");
-                String productDiscountPhrase = getProductDiscountPhrase(products.get(i), ".discount");
+                Double productOldPrice = getBillaProductOldPrice(products.get(i));
+                Double productNewPrice = getBillaProductNewPrice(products.get(i));
+                String productDiscountPhrase = getProductDiscountPhrase(products.get(i));
 
                 Product product = Product.builder()
                         .title(productTitle)
@@ -163,111 +166,87 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     private String getProductTitle(Element product, String className) {
-        try {
-            Element productTitleElement = product.selectFirst(className);
-
-            if (productTitleElement != null) {
-                if (productTitleElement.text().length() > 255) {
-                    return productTitleElement.text().substring(0, 255);
-                }
-
-                return productTitleElement.text();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
+        return Optional.ofNullable(product.selectFirst(className))
+                .map(Element::text)
+                .map(String::trim)
+                .map(text -> text.length() > 255 ? text.substring(0, 255) : text)
+                .orElse(null);
     }
 
-    private String getProductDiscountPhrase(Element product, String className) {
-        try {
-            Element discountPhraseElement = product.selectFirst(className);
-
-            if (discountPhraseElement != null) {
-                return discountPhraseElement.text().trim().substring(2);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
+    private String getProductDiscountPhrase(Element product) {
+        return Optional.ofNullable(product.selectFirst(".discount"))
+                .map(Element::text)
+                .map(String::trim)
+                .map(text -> text.length() > 2 ? text.substring(2) : "")
+                .orElse(null);
     }
 
-    private Double getBillaProductOldPrice(Element product, String className) {
-        try {
-            Elements productPrices = product.select(className);
-            Double productOldPrice = null;
-
-            if (productPrices.size() == 2) {
-                String oldPriceText = productPrices.get(0).text().trim();
-                productOldPrice = Double.parseDouble(oldPriceText);
-            }
-
-            return productOldPrice;
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
-            return null;
-        }
+    private Double getBillaProductOldPrice(Element product) {
+        return Optional.ofNullable(product.select(".price"))
+                .filter(prices -> prices.size() == 2)
+                .map(prices -> prices.get(0).text().trim())
+                .flatMap(text -> {
+                    try {
+                        return Optional.of(Double.parseDouble(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("Could not parse old price: '{}'", text);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 
-    private Double getBillaProductNewPrice(Element product, String className) {
-        try {
-            Elements productPrices = product.select(className);
-            Double productNewPrice = null;
-
-            if (productPrices.size() == 2) {
-                productNewPrice = Double.parseDouble(productPrices.get(1).text().trim());
-            } else if (productPrices.size() == 1) {
-                productNewPrice = Double.parseDouble(productPrices.get(0).text().trim());
-            }
-
-            return productNewPrice;
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
-            return null;
-        }
+    private Double getBillaProductNewPrice(Element product) {
+        return Optional.ofNullable(product.select(".price"))
+                .filter(prices -> !prices.isEmpty())
+                .map(prices -> prices.size() == 2 ? prices.get(1).text().trim() : prices.get(0).text().trim())
+                .flatMap(text -> {
+                    try {
+                        return Optional.of(Double.parseDouble(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("Could not parse new price: '{}'", text);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 
     private Date getBillaPromotionStart(Document document) {
-        Element dateDiv = document.selectFirst("div.date");
-
-        if (dateDiv != null) {
-            String[] promotionText = dateDiv.text().split(" ");
-            try {
-                LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 5], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-                return convertToDate(localDate);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        return null;
+        return Optional.ofNullable(document.selectFirst("div.date"))
+                .map(Element::text)
+                .map(text -> text.split(" "))
+                .filter(parts -> parts.length >= 5)
+                .map(parts -> parts[parts.length - 5])
+                .flatMap(dateStr -> {
+                    try {
+                        LocalDate localDate = LocalDate.parse(dateStr,
+                                DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN));
+                        return Optional.of(convertToDate(localDate));
+                    } catch (Exception e) {
+                        log.warn("Could not parse promotion start date: '{}'", dateStr, e);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 
     private Date getBillaPromotionEnd(Document document) {
-        Element dateDiv = document.selectFirst("div.date");
-
-        if (dateDiv != null) {
-            String[] promotionText = dateDiv.text().split(" ");
-            try {
-                LocalDate localDate = LocalDate.parse(promotionText[promotionText.length - 2], DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-                return convertToDate(localDate);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        return null;
-    }
-
-    private LocalDate parsePartialDate(String dateStr) {
-        int currentYear = LocalDate.now().getYear();
-        String fullDateStr = dateStr + currentYear;
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-
-        return LocalDate.parse(fullDateStr, formatter);
+        return Optional.ofNullable(document.selectFirst("div.date"))
+                .map(Element::text)
+                .map(text -> text.split(" "))
+                .filter(parts -> parts.length >= 2)
+                .map(parts -> parts[parts.length - 2])
+                .flatMap(dateStr -> {
+                    try {
+                        LocalDate localDate = LocalDate.parse(dateStr,
+                                DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN));
+                        return Optional.of(convertToDate(localDate));
+                    } catch (Exception e) {
+                        log.warn("Could not parse promotion end date: '{}'", dateStr, e);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 
     private Date convertToDate(LocalDate localDate) {
@@ -275,7 +254,7 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     public void getLidlCategoryProductsUrl(String categoryUrl) {
-        Store lidlStore = storeService.getStoreById(LIDL_ID);
+        Store lidlStore = storeService.getStoreById(Constants.LIDL_ID);
 
         try {
             Document doc = Jsoup.connect(categoryUrl).get();
@@ -303,11 +282,11 @@ public class ScrapeServiceImpl implements ScrapeService {
                         String promotionDateRange = extractPromotionDateRange(productData);
                         PromotionInterval promotionInterval = getLidlProductPromotionInterval(promotionDateRange);
 
-                        if (promotionInterval != null && promotionInterval.promotionStarts != null) {
+                        if (promotionInterval != null && promotionInterval.getPromotionStarts() != null) {
 
                             Promotion productPromotion = Promotion.builder()
-                                    .startDate(promotionInterval.promotionStarts)
-                                    .endDate(promotionInterval.promotionExpires)
+                                    .startDate(promotionInterval.getPromotionStarts())
+                                    .endDate(promotionInterval.getPromotionExpires())
                                     .storeByStoreId(lidlStore)
                                     .build();
 
@@ -332,121 +311,96 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     public List<String> getLidlCategoriesUrls() {
-        List<String> categoriesUrls = new ArrayList<>();
         String promotionsUrl = getLidlPromotionsUrl();
 
-        if (promotionsUrl != null) {
-            try {
-                Document doc = Jsoup.connect(promotionsUrl).get();
-                Elements categories = doc.select("li.AHeroStageItems__Item a");
-
-                for (Element category : categories) {
-                    String categoryUrl = lidlUrl + category.attr("href");
-                    categoriesUrls.add(categoryUrl);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (promotionsUrl == null) {
+            return Collections.emptyList();
         }
-        return categoriesUrls;
+
+        try {
+            Document doc = Jsoup.connect(promotionsUrl).get();
+
+            return doc.select("li.AHeroStageItems__Item a").stream()
+                    .map(a -> lidlUrl + a.attr("href"))
+                    .toList();
+
+        } catch (IOException e) {
+            log.error("Failed to fetch Lidl categories URLs", e);
+            return Collections.emptyList();
+        }
     }
 
     public String getLidlPromotionsUrl() {
         try {
             Document document = Jsoup.connect(lidlUrl).get();
-            Elements navItems = document.select(".n-header__main-navigation-link.n-header__main-navigation-link--first");
 
-            for (Element urlElement : navItems) {
-                if (urlElement.text().equals("Нови предложения")) {
-                    return lidlUrl + urlElement.parent().attr("href");
-                }
-            }
+            return document.select(".n-header__main-navigation-link.n-header__main-navigation-link--first").stream()
+                    .filter(urlElement -> "Нови предложения".equals(urlElement.text()))
+                    .findFirst()
+                    .map(urlElement -> lidlUrl + urlElement.parent().attr("href"))
+                    .orElse(null);
+
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to fetch Lidl promotions URL", e);
+            return null;
         }
-        return null;
     }
 
+
     public PromotionInterval getLidlProductPromotionInterval(String promotionInterval) {
-        java.util.Date promotionStarts = null;
-        java.util.Date promotionExpires = null;
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        Date promotionStarts = null;
+        Date promotionExpires;
+        SimpleDateFormat formatter = new SimpleDateFormat(Constants.DATE_TIME_FORMATTER_PATTERN, Locale.getDefault());
 
         try {
             String[] words = promotionInterval.split("\\s+");
 
-            if (words[0].equalsIgnoreCase("само")) {
-                promotionStarts = null;
-            } else if (words.length >= 3) {
-                promotionStarts = convertToDate(words[words.length - 3], formatter);
+            if (!words[0].equalsIgnoreCase("само") && words.length >= 3) {
+                promotionStarts = DateUtils.convertToDate(words[words.length - 3], formatter);
             }
 
-            promotionExpires = convertToDate(words[words.length - 1], formatter);
+            promotionExpires = DateUtils.convertToDate(words[words.length - 1], formatter);
 
             if (promotionExpires == null && promotionStarts != null) {
                 promotionExpires = new Date(promotionStarts.getTime() + (7 * 24 * 60 * 60 * 1000L));
             }
 
             if (promotionStarts == null && promotionExpires == null) {
-                System.out.println("Skipping unparseable promotion interval: " + promotionInterval);
+                log.error("Skipping unparseable promotion interval: " + promotionInterval);
                 return null;
             }
 
         } catch (IndexOutOfBoundsException | DateTimeParseException e) {
-            System.out.println("Skipping promotion due to unparseable format: " + promotionInterval);
+            log.error("Skipping promotion due to unparseable format: " + promotionInterval);
             return null;
         }
 
         return new PromotionInterval(promotionStarts, promotionExpires);
     }
 
-    private static java.util.Date convertToDate(String dateString, SimpleDateFormat formatter) {
-        try {
-            String fullDateString = dateString + new SimpleDateFormat("yyyy").format(new java.util.Date());
-            return formatter.parse(fullDateString);
-        } catch (ParseException e) {
-            System.out.println("Failed to parse date: " + dateString);
-            return null;
-        }
-    }
-
     private String extractPromotionDateRange(JSONObject productData) {
-        JSONObject stockAvailability = productData.optJSONObject("stockAvailability");
-
-        if (stockAvailability != null) {
-            JSONObject badgeInfo = stockAvailability.optJSONObject("badgeInfo");
-
-            if (badgeInfo != null) {
-                JSONArray badges = badgeInfo.optJSONArray("badges");
-
-                if (badges != null && badges.length() > 0) {
-                    return badges.getJSONObject(0).optString("text", "");
-                }
-            }
-        }
-        return null;
+        return Optional.ofNullable(productData)
+                .map(p -> p.optJSONObject("stockAvailability"))
+                .map(s -> s.optJSONObject("badgeInfo"))
+                .map(b -> b.optJSONArray("badges"))
+                .filter(badges -> !badges.isEmpty())
+                .map(badges -> badges.getJSONObject(0).optString("text", ""))
+                .orElse(null);
     }
 
     public List<String> getKauflandCategoryProductsUrl(String categoryUrl) {
-        List<String> categoryProductsUrls = new ArrayList<>();
-
         try {
             Document document = Jsoup.connect(categoryUrl).get();
 
-            Elements products = document.select("a.m-offer-tile__link, a.u-button--hover-children");
+            return document.select("a.m-offer-tile__link, a.u-button--hover-children").stream()
+                    .filter(product -> "_self".equals(product.attr("target")))
+                    .map(product -> Constants.KAUFLAND_URL + product.attr("href"))
+                    .toList();
 
-            for (Element product : products) {
-                if ("_self".equals(product.attr("target"))) {
-                    String url = "https://www.kaufland.bg" + product.attr("href");
-                    categoryProductsUrls.add(url);
-                }
-            }
         } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+            log.error("Failed to fetch category products URLs from: {}", categoryUrl, e);
+            return Collections.emptyList();
         }
-
-        return categoryProductsUrls;
     }
 
     public List<String> getKauflandCategoriesUrls() {
@@ -503,64 +457,53 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     public List<String> getKauflandPromotionsUrls() {
-        List<String> promotionsUrls = new ArrayList<>();
         String mainPromotionsUrl = getKauflandPromotionsMain();
-
         if (mainPromotionsUrl == null) {
-            return promotionsUrls;
+            return Collections.emptyList();
         }
 
         try {
             Document document = Jsoup.connect(mainPromotionsUrl).get();
-            Elements components = document.select(".textimageteaser");
 
-            for (Element component : components) {
-                String url = component.selectFirst("a").attr("href");
-                if (!url.startsWith("https:")) {
-                    url = "https://www.kaufland.bg" + url;
-                }
-                promotionsUrls.add(url);
-            }
+            return document.select(".textimageteaser").stream()
+                    .map(component -> Optional.ofNullable(component.selectFirst("a")))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(a -> {
+                        String url = a.attr("href");
+                        return url.startsWith("https:") ? url : Constants.KAUFLAND_URL + url;
+                    })
+                    .toList();
+
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to fetch Kaufland promotions URLs", e);
+            return Collections.emptyList();
         }
-
-        return promotionsUrls;
     }
 
     public String getKauflandPromotionsMain() {
         try {
             Document document = Jsoup.connect(kauflandUrl).get();
 
-            Elements navigationLinks = document.select(".m-accordion__link");
+            return document.select(".m-accordion__link").stream()
+                    .filter(link -> link.select("span").text().startsWith("Предложения"))
+                    .findFirst()
+                    .map(link -> Constants.KAUFLAND_URL + link.attr("href"))
+                    .orElse(null);
 
-            for (Element link : navigationLinks) {
-                if (link.select("span").text().startsWith("Предложения")) {
-                    return "https://www.kaufland.bg" + link.attr("href");
-                }
-            }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to fetch Kaufland promotions main page", e);
             return null;
         }
-
-        return null;
     }
 
     public String getKauflandPromotionText(Document document, List<String> classNames) {
-        try {
-            Elements divElements = document.select("div." + String.join(".", classNames));
-            if (!divElements.isEmpty()) {
-                Element spanElement = divElements.first().selectFirst("span");
-                if (spanElement != null) {
-                    return spanElement.text().trim();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
+        return Optional.ofNullable(document.select("div." + String.join(".", classNames)))
+                .filter(divs -> !divs.isEmpty())
+                .map(divs -> divs.first().selectFirst("span"))
+                .map(Element::text)
+                .map(String::trim)
+                .orElse(null);
     }
 
     public String getKauflandProductDiscountPhrase(Document soup, String className1, String className2) {
@@ -592,39 +535,36 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     public Double getProductNewPrice(Document document, String className) {
-        try {
-            Element priceElement = document.selectFirst(className);
-
-            if (priceElement != null) {
-                return Double.parseDouble(priceElement.text().trim().replace(",", "."));
-            }
-        } catch (NumberFormatException | NullPointerException e) {
-            e.printStackTrace();
-        }
-
-        return null;
+        return Optional.ofNullable(document.selectFirst(className))
+                .map(Element::text)
+                .map(String::trim)
+                .map(text -> text.replace(",", "."))
+                .flatMap(text -> {
+                    try {
+                        return Optional.of(Double.parseDouble(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("Could not parse new price: '{}'", text);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 
     public Double getKauflandProductOldPrice(Document soup, String className) {
-        try {
-            Element oldPriceElement = soup.selectFirst(className);
-
-            if (oldPriceElement != null) {
-                String oldPriceText = oldPriceElement.text().trim();
-
-                return Double.parseDouble(oldPriceText.replace(",", "."));
-            }
-        } catch (NumberFormatException | NullPointerException e) {
-            return null;
-        }
-
-        return null;
-    }
-
-    @Data
-    @AllArgsConstructor
-    private class PromotionInterval {
-        private java.util.Date promotionStarts;
-        private java.util.Date promotionExpires;
+        return Optional.ofNullable(soup.selectFirst(className))
+                .map(Element::text)
+                .map(String::trim)
+                .map(text -> text.replace("\u00A0", ""))
+                .map(text -> text.replaceAll("[^\\d,\\.]", ""))
+                .map(text -> text.replace(",", "."))
+                .flatMap(text -> {
+                    try {
+                        return Optional.of(Double.parseDouble(text));
+                    } catch (NumberFormatException e) {
+                        log.warn("Could not parse old price: '{}'", text);
+                        return Optional.empty();
+                    }
+                })
+                .orElse(null);
     }
 }
