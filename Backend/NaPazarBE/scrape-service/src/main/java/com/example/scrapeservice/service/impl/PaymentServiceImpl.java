@@ -1,7 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
 import com.example.scrapeservice.dto.PaymentInfoDTO;
-import com.example.scrapeservice.repository.PaymentRepository;
 import com.example.scrapeservice.service.PaymentService;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -20,8 +19,6 @@ import java.util.Map;
 @Transactional
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
-
-    private PaymentRepository paymentRepository;
 
     @Value("${stripe.key.secret}")
     private String stripeKey;

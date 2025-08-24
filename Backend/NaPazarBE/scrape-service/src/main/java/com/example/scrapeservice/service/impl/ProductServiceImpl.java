@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -33,7 +32,7 @@ public class ProductServiceImpl implements ProductService {
                 Arrays.stream(storeIds.split(","))
                         .map(String::trim)
                         .map(Integer::parseInt)
-                        .collect(Collectors.toList())
+                        .toList()
                 : List.of();
 
         Page<Product> pageResult = productRepository.findAllWithFilters(
@@ -44,7 +43,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductDTO> products = pageResult.getContent().stream()
                 .map(productDTOMapper)
-                .collect(Collectors.toList());
+                .toList();
 
         return new PaginatedProductResponse(
                 products,

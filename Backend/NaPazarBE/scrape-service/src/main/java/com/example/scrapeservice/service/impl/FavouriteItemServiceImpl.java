@@ -1,5 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.constants.Constants;
 import com.example.scrapeservice.dto.PaginatedProductResponse;
 import com.example.scrapeservice.dto.ProductDTO;
 import com.example.scrapeservice.exceptions.ProductException;
@@ -18,7 +19,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -38,7 +38,7 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElseThrow(() -> new IllegalStateException(Constants.USER_NOT_FOUND));
 
         FavouriteItem favouriteItem = FavouriteItem.builder()
                 .user(user)
@@ -55,7 +55,7 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElseThrow(() -> new IllegalStateException(Constants.USER_NOT_FOUND));
 
         Page<FavouriteItem> pageResult = favouriteItemRepository.findAllByUser(user.getId(), pageRequest);
 
@@ -70,7 +70,7 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
                             .discountPhrase(product.getDiscountPhrase())
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return new PaginatedProductResponse(
                 products,
@@ -79,8 +79,6 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
         );
     }
 
-
-
     @Override
     public void removeFavouriteItem(int id) {
 
@@ -88,7 +86,7 @@ public class FavouriteItemServiceImpl implements FavouriteItemService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElseThrow(() -> new IllegalStateException(Constants.USER_NOT_FOUND));
 
         FavouriteItem favouriteItem = favouriteItemRepository.findByUserAndProductId(user.getId(), id)
                 .orElseThrow(() -> new IllegalStateException("Favorite item not found"));

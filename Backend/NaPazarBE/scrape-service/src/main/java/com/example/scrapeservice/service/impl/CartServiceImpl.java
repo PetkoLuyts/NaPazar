@@ -1,5 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.constants.Constants;
 import com.example.scrapeservice.dto.CartItemResponse;
 import com.example.scrapeservice.exceptions.CartException;
 import com.example.scrapeservice.exceptions.ProductException;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +37,7 @@ public class CartServiceImpl implements CartService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UserException("User not found"));
+                .orElseThrow(() -> new UserException(Constants.USER_NOT_FOUND));
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductException("Product with id " + productId + " not found"));
@@ -68,14 +68,14 @@ public class CartServiceImpl implements CartService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UserException("User not found"));
+                .orElseThrow(() -> new UserException(Constants.USER_NOT_FOUND));
 
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new CartException("Cart not found"));
 
         return cart.getItems().stream()
                 .map(cartItemDTOMapper)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -84,7 +84,7 @@ public class CartServiceImpl implements CartService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UserException("User not found"));
+                .orElseThrow(() -> new UserException(Constants.USER_NOT_FOUND));
 
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new CartException("Cart not found"));
@@ -108,7 +108,7 @@ public class CartServiceImpl implements CartService {
         String username = auth.getName();
 
         AppUser user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UserException("User not found"));
+                .orElseThrow(() -> new UserException(Constants.USER_NOT_FOUND));
 
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new CartException("Cart not found"));

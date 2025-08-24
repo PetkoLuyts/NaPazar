@@ -14,11 +14,6 @@ public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
 
     @Override
-    public Store createStore(Store store) {
-        return storeRepository.save(store);
-    }
-
-    @Override
     public Store getStoreById(int id) {
         return storeRepository.findById(id)
                 .orElseThrow(() -> new StoreException("Store with id " + id + " not found"));

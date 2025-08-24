@@ -1,5 +1,6 @@
 package com.example.scrapeservice.service.impl;
 
+import com.example.scrapeservice.constants.Constants;
 import com.example.scrapeservice.dto.AuthenticationRequest;
 import com.example.scrapeservice.dto.AuthenticationResponse;
 import com.example.scrapeservice.dto.RegisterRequest;
@@ -153,7 +154,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public void resetPassword(String email, String password) {
         AppUser user = repository.findByEmail(email)
-                .orElseThrow(() -> new UserException("User not found"));
+                .orElseThrow(() -> new UserException(Constants.USER_NOT_FOUND));
 
         user.setPassword(passwordEncoder.encode(password));
 
