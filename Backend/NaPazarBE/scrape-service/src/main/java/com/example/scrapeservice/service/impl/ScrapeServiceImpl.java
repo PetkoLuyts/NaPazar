@@ -2,6 +2,7 @@ package com.example.scrapeservice.service.impl;
 
 import com.example.scrapeservice.constants.Constants;
 import com.example.scrapeservice.dto.PromotionInterval;
+import com.example.scrapeservice.dto.PromotionPeriod;
 import com.example.scrapeservice.model.Product;
 import com.example.scrapeservice.model.Promotion;
 import com.example.scrapeservice.model.Store;
@@ -34,6 +35,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -121,18 +124,20 @@ public class ScrapeServiceImpl implements ScrapeService {
     }
 
     private void scrapeBillaPromotions() {
-        final Document document;
-
         try {
-            document = Jsoup.connect(billaCategoryUrl).get();
-            Date billaPromotionStart = getBillaPromotionStart(document);
-            Date billaPromotionEnd = getBillaPromotionEnd(document);
+            Document document = Jsoup.connect(billaCategoryUrl).get();
+            PromotionPeriod promotionPeriod = getBillaPromotionPeriod(document);
+
+            if (promotionPeriod == null) {
+                log.warn("Could not determine Billa promotion period, skipping scrape.");
+                return;
+            }
 
             Store billaStore = storeService.getStoreById(Constants.BILLA_ID);
 
             Promotion billaPromotion = Promotion.builder()
-                    .startDate(billaPromotionStart)
-                    .endDate(billaPromotionEnd)
+                    .startDate(promotionPeriod.getStartDate())
+                    .endDate(promotionPeriod.getEndDate())
                     .storeByStoreId(billaStore)
                     .build();
 
@@ -141,24 +146,30 @@ public class ScrapeServiceImpl implements ScrapeService {
             Elements products = document.select("div.product");
 
             for (int i = 5; i < products.size() - 10; i++) {
-                String productTitle = getProductTitle(products.get(i), ".actualProduct");
-                Double productOldPrice = getBillaProductOldPrice(products.get(i));
-                Double productNewPrice = getBillaProductNewPrice(products.get(i));
-                String productDiscountPhrase = getProductDiscountPhrase(products.get(i));
+                Element productDiv = products.get(i);
 
-                Product product = Product.builder()
-                        .title(productTitle)
-                        .oldPrice(productOldPrice)
-                        .newPrice(productNewPrice)
-                        .discountPhrase(productDiscountPhrase)
-                        .promotion(savedPromotion)
-                        .build();
+                String productTitle = getProductTitle(productDiv, ".actualProduct");
+                Double productOldPrice = getBillaProductOldPrice(productDiv);
+                Double productNewPrice = getBillaProductNewPrice(productDiv);
+                String productDiscountPhrase = getProductDiscountPhrase(productDiv);
 
-                if (product.getNewPrice() != null) {
+                if (productNewPrice != null) {
+                    Product product = Product.builder()
+                            .title(productTitle)
+                            .oldPrice(productOldPrice)
+                            .newPrice(productNewPrice)
+                            .discountPhrase(productDiscountPhrase)
+                            .promotion(savedPromotion)
+                            .build();
+
                     productService.createProduct(product);
                 }
             }
+
+            log.info("Successfully scraped Billa promotions: {} products added", products.size() - 15);
+
         } catch (IOException e) {
+            log.error("Failed to scrape Billa promotions", e);
             throw new RuntimeException(e);
         }
     }
@@ -209,42 +220,31 @@ public class ScrapeServiceImpl implements ScrapeService {
                 .orElse(null);
     }
 
-    private Date getBillaPromotionStart(Document document) {
-        return Optional.ofNullable(document.selectFirst("div.date"))
-                .map(Element::text)
-                .map(text -> text.split(" "))
-                .filter(parts -> parts.length >= 5)
-                .map(parts -> parts[parts.length - 5])
-                .flatMap(dateStr -> {
-                    try {
-                        LocalDate localDate = LocalDate.parse(dateStr,
-                                DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN));
-                        return Optional.of(convertToDate(localDate));
-                    } catch (Exception e) {
-                        log.warn("Could not parse promotion start date: '{}'", dateStr, e);
-                        return Optional.empty();
-                    }
-                })
-                .orElse(null);
-    }
+    private PromotionPeriod getBillaPromotionPeriod(Document document) {
+        Elements dateDivs = document.select("div.actualProduct");
+        if (dateDivs.size() <= 2) return null;
 
-    private Date getBillaPromotionEnd(Document document) {
-        return Optional.ofNullable(document.selectFirst("div.date"))
-                .map(Element::text)
-                .map(text -> text.split(" "))
-                .filter(parts -> parts.length >= 2)
-                .map(parts -> parts[parts.length - 2])
-                .flatMap(dateStr -> {
-                    try {
-                        LocalDate localDate = LocalDate.parse(dateStr,
-                                DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN));
-                        return Optional.of(convertToDate(localDate));
-                    } catch (Exception e) {
-                        log.warn("Could not parse promotion end date: '{}'", dateStr, e);
-                        return Optional.empty();
-                    }
-                })
-                .orElse(null);
+        String text = dateDivs.get(2).text();
+
+        try {
+            String[] parts = text.split(" ");
+            String startStr = parts[3];
+            String endStr = parts[5];
+
+            String year = endStr.split("\\.")[2];
+            if (!startStr.endsWith(year)) {
+                startStr = startStr + year;
+            }
+
+            Date startDate = convertToDate(LocalDate.parse(startStr, DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN)));
+            Date endDate = convertToDate(LocalDate.parse(endStr, DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMATTER_PATTERN)));
+
+            return new PromotionPeriod(startDate, endDate);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private Date convertToDate(LocalDate localDate) {
