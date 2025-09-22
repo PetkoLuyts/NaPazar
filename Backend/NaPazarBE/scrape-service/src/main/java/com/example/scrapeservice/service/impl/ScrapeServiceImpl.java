@@ -29,14 +29,11 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -68,58 +65,109 @@ public class ScrapeServiceImpl implements ScrapeService {
 
     @Override
     public void scrapeKauflandData() {
-        List<String> categoryUrls = getKauflandCategoriesUrls();
-        Store kauflandStore = storeService.getStoreById(Constants.KAUFLAND_ID);
+        try {
+            Document document = Jsoup.connect("https://www.kaufland.bg/aktualni-predlozheniya/oferti.html").get();
+            Element script = document.selectFirst("script:containsData(window.SSR)");
+            List<Product> products = new ArrayList<>();
+            Store kauflandStore = storeService.getStoreById(Constants.KAUFLAND_ID);
 
-        for (String categoryUrl : categoryUrls) {
-            List<String> productUrls = getKauflandCategoryProductsUrl(categoryUrl);
+            if (script == null) {
+                log.error("No SSR script found on the page.");
+                return;
+            }
 
-            for (String productUrl : productUrls) {
-                try {
-                    Document productPage = Jsoup.connect(productUrl).get();
+            String scriptContent = script.html();
+            int firstBrace = scriptContent.indexOf('{');
+            int lastBrace = scriptContent.lastIndexOf('}');
+            if (firstBrace == -1 || lastBrace == -1) {
+                log.error("No JSON braces found in SSR script");
+                return;
+            }
 
-                    String promotionText = getKauflandPromotionText(productPage, Arrays.asList("a-eye-catcher", "a-eye-catcher--secondary"));
-                    Date promotionStarts = null;
-                    Date promotionExpires = null;
-                    if (promotionText != null) {
-                        String[] parts = promotionText.split("\\s+");
-                        String startDateStr = parts[0];
-                        String endDateStr = parts[parts.length - 1];
+            String jsonString = scriptContent.substring(firstBrace, lastBrace + 1).trim();
+            String textAfterEqual = null;
+            String[] parts = jsonString.split("=", 2);
+            if (parts.length > 1) {
+                textAfterEqual = parts[1].trim();
+            }
+            JSONObject root = new JSONObject(textAfterEqual);
+            JSONObject props = root.getJSONObject("props");
+            JSONObject offerData = props.getJSONObject("offerData");
 
-                        promotionStarts = convertToDate(DateUtils.parsePartialDate(startDateStr));
-                        promotionExpires = convertToDate(DateUtils.parsePartialDate(endDateStr));
-                    }
+            JSONArray weekDates = props.getJSONObject("weekData").getJSONArray("currentWeekDates");
+            String promoSalesFrom = weekDates.getString(0);
+            String promoSalesTo = weekDates.getString(weekDates.length() - 1);
 
-                    String productTitle = getProductTitle(productPage, ".t-offer-detail__title");
-                    String productDiscountPhrase = getKauflandProductDiscountPhrase(productPage, ".a-pricetag__discount", ".a-pricetag__old-price");
-                    Double productOldPrice = getKauflandProductOldPrice(productPage, ".a-pricetag__old-price");
-                    Double productNewPrice = getProductNewPrice(productPage, ".a-pricetag__price");
+            JSONArray cycles = offerData.getJSONArray("cycles");
+            for (int i = 0; i < cycles.length(); i++) {
+                JSONObject cycle = cycles.getJSONObject(i);
+                JSONArray categories = cycle.getJSONArray("categories");
 
-                    if (productTitle != null && !productDiscountPhrase.equals("само") && !productDiscountPhrase.equals("тази седмица"))
-                    {
-                        Promotion promotion = Promotion.builder()
-                                .storeByStoreId(kauflandStore)
-                                .startDate(promotionStarts)
-                                .endDate(promotionExpires)
-                                .build();
+                for (int j = 0; j < categories.length(); j++) {
+                    JSONObject category = categories.getJSONObject(j);
+                    String categoryName = category.getString("displayName");
+                    String dateFrom = category.getString("dateFrom");
+                    String dateTo = category.getString("dateTo");
 
-                        Promotion savedPromotion = promotionService.createPromotion(promotion);
+                    JSONArray offers = category.getJSONArray("offers");
+                    for (int k = 0; k < offers.length(); k++) {
+                        JSONObject offer = offers.getJSONObject(k);
+                        String title = offer.optString("title");
+                        String subtitle = offer.optString("subtitle");
+                        String oldPrice = offer.optString("formattedOldPrice");
+                        String newPrice = offer.optString("formattedPrice");
 
                         Product product = Product.builder()
-                                .title(productTitle)
-                                .oldPrice(productOldPrice)
-                                .newPrice(productNewPrice)
-                                .discountPhrase(productDiscountPhrase)
-                                .promotion(savedPromotion)
+                                .title(title)
+                                .discountPhrase(subtitle)
+                                .newPrice(parsePrice(newPrice))
+                                .oldPrice(parsePrice(oldPrice))
                                 .build();
 
-                        productService.createProduct(product);
+                        products.add(product);
                     }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
             }
+
+            Promotion kauflandPromotion = Promotion.builder()
+                    .startDate(parseDate(promoSalesFrom))
+                    .endDate(parseDate(promoSalesTo))
+                    .storeByStoreId(kauflandStore)
+                    .build();
+
+            Promotion promotion = promotionService.createPromotion(kauflandPromotion);
+
+            for (Product product : products) {
+                product.setPromotion(promotion);
+            }
+
+            productService.createProducts(products);
+            log.info("Successfully inserted {} kaufland products", products.size());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Date parseDate(String dateStr) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd").parse(dateStr);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Double parsePrice(String priceStr) {
+        if (priceStr == null || priceStr.isEmpty()) return null;
+        String cleaned = priceStr.replaceAll("[^\\d,\\.]", "").trim();
+        if (cleaned.contains(",") && cleaned.contains(".")) {
+            cleaned = cleaned.replace(".", "").replace(",", ".");
+        } else if (cleaned.contains(",")) {
+            cleaned = cleaned.replace(",", ".");
+        }
+        try {
+            return Double.parseDouble(cleaned);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -331,19 +379,21 @@ public class ScrapeServiceImpl implements ScrapeService {
     public String getLidlPromotionsUrl() {
         try {
             Document document = Jsoup.connect(lidlUrl).get();
+            Elements navItems = document.select(".n-header__main-navigation-link.n-header__main-navigation-link--first");
 
-            return document.select(".n-header__main-navigation-link.n-header__main-navigation-link--first").stream()
-                    .filter(urlElement -> "Нови предложения".equals(urlElement.text()))
-                    .findFirst()
-                    .map(urlElement -> lidlUrl + urlElement.parent().attr("href"))
-                    .orElse(null);
+            for (Element urlElement : navItems) {
+                if ("Храни и напитки".equals(urlElement.text().trim())) {
+                    return lidlUrl + urlElement.attr("href");
+                }
+            }
 
         } catch (IOException e) {
             log.error("Failed to fetch Lidl promotions URL", e);
             return null;
         }
-    }
 
+        return null;
+    }
 
     public PromotionInterval getLidlProductPromotionInterval(String promotionInterval) {
         Date promotionStarts = null;
@@ -383,186 +433,6 @@ public class ScrapeServiceImpl implements ScrapeService {
                 .map(b -> b.optJSONArray("badges"))
                 .filter(badges -> !badges.isEmpty())
                 .map(badges -> badges.getJSONObject(0).optString("text", ""))
-                .orElse(null);
-    }
-
-    public List<String> getKauflandCategoryProductsUrl(String categoryUrl) {
-        try {
-            Document document = Jsoup.connect(categoryUrl).get();
-
-            return document.select("a.m-offer-tile__link, a.u-button--hover-children").stream()
-                    .filter(product -> "_self".equals(product.attr("target")))
-                    .map(product -> Constants.KAUFLAND_URL + product.attr("href"))
-                    .toList();
-
-        } catch (IOException e) {
-            log.error("Failed to fetch category products URLs from: {}", categoryUrl, e);
-            return Collections.emptyList();
-        }
-    }
-
-    public List<String> getKauflandCategoriesUrls() {
-        List<String> categories = new ArrayList<>();
-
-        try {
-            List<String> promotionsUrls = getKauflandPromotionsUrls();
-            if (promotionsUrls.isEmpty()) {
-                return categories;
-            }
-
-            Document document = Jsoup.connect(promotionsUrls.get(1)).get();
-
-            Elements buttons = document.select(".a-button--primary");
-            String mainCategoryUrl = null;
-
-            for (Element button : buttons) {
-                Element linkElement = button.selectFirst("a");
-
-                if (linkElement != null && linkElement.text().startsWith("Разгледай всички предложения")) {
-                    mainCategoryUrl = linkElement.attr("href");
-                    break;
-                }
-            }
-
-            if (mainCategoryUrl == null) {
-                return categories;
-            }
-
-            if (!mainCategoryUrl.startsWith("https")) {
-                mainCategoryUrl = kauflandUrl + mainCategoryUrl;
-            }
-
-            document = Jsoup.connect(mainCategoryUrl).get();
-
-            Elements promotionSections = new Elements(
-                    document.select("ul.m-accordion__list.m-accordion__list--level-2").subList(0, 2)
-            );
-
-            for (Element section : promotionSections) {
-                Elements promotionLinks = section.select("a");
-                for (Element link : promotionLinks) {
-                    String categoryUrl = link.attr("href");
-                    if (!categoryUrl.startsWith("https")) {
-                        categoryUrl = kauflandUrl + categoryUrl;
-                    }
-                    categories.add(categoryUrl);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return categories;
-    }
-
-    public List<String> getKauflandPromotionsUrls() {
-        String mainPromotionsUrl = getKauflandPromotionsMain();
-        if (mainPromotionsUrl == null) {
-            return Collections.emptyList();
-        }
-
-        try {
-            Document document = Jsoup.connect(mainPromotionsUrl).get();
-
-            return document.select(".textimageteaser").stream()
-                    .map(component -> Optional.ofNullable(component.selectFirst("a")))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .map(a -> {
-                        String url = a.attr("href");
-                        return url.startsWith("https:") ? url : Constants.KAUFLAND_URL + url;
-                    })
-                    .toList();
-
-        } catch (IOException e) {
-            log.error("Failed to fetch Kaufland promotions URLs", e);
-            return Collections.emptyList();
-        }
-    }
-
-    public String getKauflandPromotionsMain() {
-        try {
-            Document document = Jsoup.connect(kauflandUrl).get();
-
-            return document.select(".m-accordion__link").stream()
-                    .filter(link -> link.select("span").text().startsWith("Предложения"))
-                    .findFirst()
-                    .map(link -> Constants.KAUFLAND_URL + link.attr("href"))
-                    .orElse(null);
-
-        } catch (IOException e) {
-            log.error("Failed to fetch Kaufland promotions main page", e);
-            return null;
-        }
-    }
-
-    public String getKauflandPromotionText(Document document, List<String> classNames) {
-        return Optional.ofNullable(document.select("div." + String.join(".", classNames)))
-                .filter(divs -> !divs.isEmpty())
-                .map(divs -> divs.first().selectFirst("span"))
-                .map(Element::text)
-                .map(String::trim)
-                .orElse(null);
-    }
-
-    public String getKauflandProductDiscountPhrase(Document soup, String className1, String className2) {
-        try {
-            Element discountElement = soup.selectFirst(className1);
-            if (discountElement != null) {
-                return discountElement.text().trim();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            Element oldPriceElement = soup.selectFirst(className2);
-
-            if (oldPriceElement != null) {
-                try {
-                    Float.parseFloat(oldPriceElement.text().trim().replace(",", "."));
-                    return null;
-                } catch (NumberFormatException e) {
-                    return oldPriceElement.text().trim();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    public Double getProductNewPrice(Document document, String className) {
-        return Optional.ofNullable(document.selectFirst(className))
-                .map(Element::text)
-                .map(String::trim)
-                .map(text -> text.replace(",", "."))
-                .flatMap(text -> {
-                    try {
-                        return Optional.of(Double.parseDouble(text));
-                    } catch (NumberFormatException e) {
-                        log.warn("Could not parse new price: '{}'", text);
-                        return Optional.empty();
-                    }
-                })
-                .orElse(null);
-    }
-
-    public Double getKauflandProductOldPrice(Document soup, String className) {
-        return Optional.ofNullable(soup.selectFirst(className))
-                .map(Element::text)
-                .map(String::trim)
-                .map(text -> text.replace("\u00A0", ""))
-                .map(text -> text.replaceAll("[^\\d,\\.]", ""))
-                .map(text -> text.replace(",", "."))
-                .flatMap(text -> {
-                    try {
-                        return Optional.of(Double.parseDouble(text));
-                    } catch (NumberFormatException e) {
-                        log.warn("Could not parse old price: '{}'", text);
-                        return Optional.empty();
-                    }
-                })
                 .orElse(null);
     }
 }

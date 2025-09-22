@@ -29,6 +29,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public void createProducts(List<Product> products) {
+        productRepository.saveAll(products);
+    }
+
+    @Override
     public PaginatedProductResponse getAllProducts(String searchTerm, String storeIds, PageRequest pageRequest) {
         List<Integer> storeIdList = storeIds != null && !storeIds.isEmpty() ?
                 Arrays.stream(storeIds.split(","))
